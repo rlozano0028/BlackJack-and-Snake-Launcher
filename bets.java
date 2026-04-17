@@ -1,25 +1,32 @@
-public class bets {
+public class Bets 
+{
     private double total;
     private double currentBet;
 
-    public bets(double startingTotal) {
-        if (startingTotal < 0) {
+    public Bets(double startingTotal) 
+    {
+        if (startingTotal < 0) 
+        {
             throw new IllegalArgumentException("Starting total must be non-negative");
         }
         this.total = startingTotal;
         this.currentBet = 0;
     }
 
-    public double getTotal() {
+    public double getTotal() 
+    {
         return total;
     }
 
-    public double getCurrentBet() {
+    public double getCurrentBet() 
+    {
         return currentBet;
     }
 
-    public boolean placeBet(double amount) {
-        if (amount <= 0 || amount > total) {
+    public boolean placeBet(double amount) 
+    {
+        if (amount <= 0 || amount > total) 
+        {
             return false;
         }
         currentBet = amount;
@@ -27,7 +34,8 @@ public class bets {
         return true;
     }
 
-    public void win() {
+    public void win() 
+    {
         total += currentBet * 2;
         currentBet = 0;
     }
