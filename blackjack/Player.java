@@ -1,0 +1,99 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class Player {
+
+    public enum Status { PLAYING, STAND, BUST, BLACKJACK, SURRENDER }
+
+    private final String name;
+    private final List<Card> hand;
+    private final Bets account;
+    private Status status;
+
+    public Player(String name, double startingFunds) {
+        this.name = name;
+        this.hand = new ArrayList<>();
+        this.account = new Bets(startingFunds);
+        this.status = Status.PLAYING;
+    }
+
+    // --- Betting (delegates to Bets) ---
+    public boolean placeBet(double amount) {
+        return account.placeBet(amount);
+    }
+
+    public Bets getAccount() {
+        return account;
+    }
+
+    // --- Hand management ---
+    public void receiveCard(Card card) {
+        hand.add(card);
+        updateStatusAfterDeal();
+    }
+
+    public boolean hit(Deck deck) {
+        if (status != Status.PLAYING) return false;
+        Card c = deck.draw();
+        if (c == null) return false;
+        receiveCard(c);
+        return true;
+    }
+
+    public void stand() {
+        if (status == Status.PLAYING) status = Status.STAND;
+    }
+
+    // Double the current bet, take exactly one card, then stand.
+    public boolean doubleDown(Deck deck) {
+        double bet = account.getCurrentBet();
+        if (status != Status.PLAYING || hand.size() != 2) return false;
+        // placeBet overwrites currentBet, so we pass the full doubled amount
+        // and require the extra funds to still be available.
+        if (bet > account.getTotal()) return false;
+        if (!account.placeBet(bet * 2)) return false;
+        hit(deck);
+        if (status == Status.PLAYING) stand();
+        return true;
+    }
+
+    public void clearHand() {
+        hand.clear();
+        status = Status.PLAYING;
+    }
+
+    // --- Hand evaluation ---
+    // Aces count as 11 by default, demoted to 1 as needed to avoid busting.
+    public int getHandValue() {
+        int total = 0;
+        int aces = 0;
+        for (Card c : hand) {
+            total += c.getNumberValue();
+            if (c.getRank().equals("A")) aces++;
+        }
+        while (total > 21 && aces > 0) {
+            total -= 10;
+            aces--;
+        }
+        return total;
+    }
+
+    public boolean isBust()       { return getHandValue() > 21; }
+    public boolean hasBlackjack() { return hand.size() == 2 && getHandValue() == 21; }
+
+    private void updateStatusAfterDeal() {
+        if (hasBlackjack())      status = Status.BLACKJACK;
+        else if (isBust())       status = Status.BUST;
+    }
+
+    // --- Getters ---
+    public String getName()     { return name; }
+    public List<Card> getHand() { return hand; }
+    public Status getStatus()   { return status; }
+
+    @Override
+    public String toString() {
+        return name + " [" + status + "] " + hand + " = " + getHandValue()
+             + " | " + account;
+    }
+}
