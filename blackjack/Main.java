@@ -135,17 +135,15 @@ public class Main extends Application
         Button deal   = actionButton("Deal",   "#2a9d8f");
         Button hit    = actionButton("Hit",    "#457b9d");
         Button stand  = actionButton("Stand",  "#e76f51");
-        Button dbl    = actionButton("Double", "#f4a261");
         Button reset  = actionButton("Reset",  "#6c757d");
 
         // Non-functional for now; just shows buttons register clicks.
         deal.setOnAction(e  -> System.out.println("Deal clicked"));
         hit.setOnAction(e   -> System.out.println("Hit clicked"));
         stand.setOnAction(e -> System.out.println("Stand clicked"));
-        dbl.setOnAction(e   -> System.out.println("Double clicked"));
         reset.setOnAction(e -> System.out.println("Reset clicked"));
 
-        HBox row = new HBox(12, deal, hit, stand, dbl, reset);
+        HBox row = new HBox(12, deal, hit, stand, reset);
         row.setAlignment(Pos.CENTER);
         row.setPadding(new Insets(10, 0, 0, 0));
         return row;
