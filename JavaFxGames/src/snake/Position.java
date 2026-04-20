@@ -9,5 +9,10 @@ public class Position {
         this.xPosition = xPosition;
         this.yPosition = yPosition;
     }
-
+    public int getX(){
+        return this.xPosition;
+    }
+    public int getY(){
+        return this.yPosition;
+    }
 }

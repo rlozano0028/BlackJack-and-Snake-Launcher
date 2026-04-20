@@ -1,9 +1,7 @@
 package snake;
 
-import snake.GameVariables;
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.stage.Stage;
 
 public class SnakeGameControl extends Application{
@@ -13,7 +11,7 @@ public class SnakeGameControl extends Application{
         GamePane gamePane = new GamePane();
         
         Scene scene = new Scene(gamePane, GameVariables.WIDTH,GameVariables.HEIGHT);
-
+        gamePane.requestFocus();
         primaryStage.setTitle("SNAKE TESTING");
         primaryStage.setScene(scene);
         primaryStage.show();

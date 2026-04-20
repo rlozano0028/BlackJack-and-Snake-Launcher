@@ -1,23 +1,52 @@
 package snake;
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
 
-public class Snake extends Application {
-    @Override
-    public void start(Stage stage) {
-        Label label = new Label("helo Wurld");
-        StackPane root = new StackPane(label);
-        Scene scene = new Scene(root, 400, 200);
+import java.util.ArrayList;
 
-        stage.setTitle("Testing");
-        stage.setScene(scene);
-        stage.show();
+public class Snake{
+
+    private ArrayList<Position> positions;
+    Position head;
+    int length;
+    // private Direction direction;
+    
+    public Snake(){
+        positions = new ArrayList<>();
+        length = 3;
+        positions.add(new Position(25,50));
+        positions.add(new Position(50,50));
+        positions.add(new Position(75,50));
+        // this.direction = Direction.RIGHT;
+        setHead();
     }
-
-    public static void main(String[] args) {
-        launch(args);
+    public void setHead(){
+        head = positions.get(positions.size() -1);
+    }
+    public ArrayList<Position> getPositions(){
+        return this.positions;
+    }
+    public int getLength(){
+        return length;
+    }
+    // public void setDirection(Direction newDirection){
+    //     direction = newDirection;
+    // }
+    public Position getHead(){
+        return head;
+    }
+    public void moveLeft(){
+        head = new Position(head.getX() - GameVariables.TILE_SIZE, head.getY());
+        positions.add(head);
+    }
+    public void moveRight(){
+        head = new Position(head.getX() + GameVariables.TILE_SIZE, head.getY());
+        positions.add(head);
+    }
+    public void moveDown(){
+        head = new Position(head.getX(), head.getY() + GameVariables.TILE_SIZE);
+        positions.add(head);
+    }
+    public void moveUp(){
+        head = new Position(head.getX(), head.getY() - GameVariables.TILE_SIZE);
+        positions.add(head);
     }
 }
