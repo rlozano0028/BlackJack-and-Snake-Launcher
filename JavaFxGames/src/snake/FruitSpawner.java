@@ -9,7 +9,7 @@ public class FruitSpawner {
         random = new Random();
     }
 
-    Position generateFruitPosition(Snake snake) {
+    public Position generateFruitPosition(Snake snake) {
         int x, y;
         Position newPosition;
 
@@ -22,7 +22,7 @@ public class FruitSpawner {
         return newPosition;
     }
 
-    Fruit spawnFruit(Snake snake) {
+    public Fruit spawnFruit(Snake snake) {
         Position position = generateFruitPosition(snake);
         return new Fruit(position);
     }

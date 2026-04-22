@@ -12,6 +12,7 @@ import javafx.util.Duration;
 public class GamePane extends Pane {
     private Snake snake;
     private Fruit fruit;
+    private FruitSpawner fruitSpawner;
     private Canvas canvas;
     private GraphicsContext gc;
     private ArrayList<Position> snakePositions;
@@ -21,7 +22,8 @@ public class GamePane extends Pane {
         canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT);
         gc = canvas.getGraphicsContext2D();
         snake = new Snake();
-        fruit = new FruitSpawner().spawnFruit(snake);
+        fruitSpawner = new FruitSpawner();
+        fruit = fruitSpawner.spawnFruit(snake);
         snakePositions = snake.getPositions();
         getChildren().add(canvas);
 
@@ -72,6 +74,7 @@ public class GamePane extends Pane {
     private void redraw() {
         drawGrid();
         drawSnake();
+        drawFruit();
     }
 
     private void drawGrid() {

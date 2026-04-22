@@ -77,4 +77,8 @@ public class Snake{
         head = new Position(newX, newY);
         positions.add(head);
     }
+
+    public void grow() {
+        length++;
+    }
 }
