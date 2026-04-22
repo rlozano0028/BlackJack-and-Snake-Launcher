@@ -11,6 +11,7 @@ import javafx.util.Duration;
 
 public class GamePane extends Pane {
     private Snake snake;
+    private Fruit fruit;
     private Canvas canvas;
     private GraphicsContext gc;
     private ArrayList<Position> snakePositions;
@@ -20,6 +21,7 @@ public class GamePane extends Pane {
         canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT);
         gc = canvas.getGraphicsContext2D();
         snake = new Snake();
+        fruit = new FruitSpawner().spawnFruit(snake);
         snakePositions = snake.getPositions();
         getChildren().add(canvas);
 
@@ -28,36 +30,36 @@ public class GamePane extends Pane {
         setOnKeyPressed(e -> {
             switch (e.getCode()) {
                 case UP:
-                    direction = Direction.UP;
+                    snake.setDirection(Direction.UP);
                     break;
                 case DOWN:
-                    direction = Direction.DOWN;
+                    snake.setDirection(Direction.DOWN);
                     break;
                 case LEFT:
-                    direction = Direction.LEFT;
+                    snake.setDirection(Direction.LEFT);
                     break;
                 case RIGHT:
-                    direction = Direction.RIGHT;
+                    snake.setDirection(Direction.RIGHT);
                     break;
             }
         });
 
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(100), e -> {
-            switch (direction) {
-                case UP:
-                    snake.moveUp();
-                    break;
-                case DOWN:
-                    snake.moveDown();
-                    break;
-                case LEFT:
-                    snake.moveLeft();
-                    break;
-                case RIGHT:
-                    snake.moveRight();
-                    break;
-            }
-
+            // switch (direction) {
+            //     case UP:
+            //         snake.moveUp();
+            //         break;
+            //     case DOWN:
+            //         snake.moveDown();
+            //         break;
+            //     case LEFT:
+            //         snake.moveLeft();
+            //         break;
+            //     case RIGHT:
+            //         snake.moveRight();
+            //         break;
+            //}
+            snake.move();
             redraw();
         }));
 
@@ -98,5 +100,11 @@ public class GamePane extends Pane {
 
             gc.fillRect(x, y, GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
         }
+    }
+
+    private void drawFruit() {
+        gc.setFill(Color.RED);
+        Position fruitPos = fruit.getPosition();
+        gc.fillOval(fruitPos.getX(), fruitPos.getY(), GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
     }
 }
