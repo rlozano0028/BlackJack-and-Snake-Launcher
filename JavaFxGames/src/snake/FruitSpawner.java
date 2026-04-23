@@ -5,6 +5,7 @@ import java.util.Random;
 public class FruitSpawner {
     private Random random;
 
+    //spawns fruit in random position
     public FruitSpawner() {
         random = new Random();
     }
@@ -13,6 +14,7 @@ public class FruitSpawner {
         int x, y;
         Position newPosition;
 
+        //ensures fruit doesn't spawn on snake
        do{
             x = random.nextInt(GameVariables.WIDTH / GameVariables.TILE_SIZE) * GameVariables.TILE_SIZE;
             y = random.nextInt(GameVariables.HEIGHT / GameVariables.TILE_SIZE) * GameVariables.TILE_SIZE;

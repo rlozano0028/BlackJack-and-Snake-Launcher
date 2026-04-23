@@ -9,6 +9,12 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
+
 public class GamePane extends Pane {
     private Snake snake;
     private Fruit fruit;
@@ -129,10 +135,39 @@ public class GamePane extends Pane {
     }
 
     private void gameOver() {
-        gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
+        // gc.setFill(Color.BLACK);
+        // gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
 
-        gc.setFill(Color.WHITE);
-        gc.fillText("Game Over! \nScore: " + snake.getScore(), GameVariables.WIDTH / 2 - 50, GameVariables.HEIGHT / 2);
+        // gc.setFill(Color.WHITE);
+        // gc.fillText("Game Over! \nScore: " + snake.getScore(), GameVariables.WIDTH / 2 - 50, GameVariables.HEIGHT / 2);
+
+        Stage gameOverStage = new Stage();
+        gameOverStage.setTitle("Game Over");
+
+        Label gameOverLabel = new Label("Game Over!!!");
+        Label scoreLabel = new Label("Your Score: " + snake.getScore());
+
+        Button restartButton = new Button("Restart");
+        restartButton.setOnAction(e -> {
+            snake.restart();
+            fruit = fruitSpawner.spawnFruit(snake);
+            timeline.play();
+            gameOverStage.close();
+            requestFocus(); 
+        });
+
+        //Need to update and have game exit properly
+        Button exitButton = new Button("Exit");
+        exitButton.setOnAction(e -> {
+            gameOverStage.close();
+        });
+
+        VBox layout = new VBox(15);
+        layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
+        layout.getChildren().addAll(gameOverLabel, scoreLabel, restartButton, exitButton);
+
+        Scene popupScene = new Scene(layout, 200, 180);
+        gameOverStage.setScene(popupScene);
+        gameOverStage.show();
     }
 }
