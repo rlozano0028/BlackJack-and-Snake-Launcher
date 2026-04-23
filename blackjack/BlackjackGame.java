@@ -28,6 +28,35 @@ public class BlackjackGame {
         roundActive = false;
     }
 
+    // getters for the javafx
+    public Player getHuman() {
+        return human;
+    }
+
+    public Player getAi1() {
+        return ai1;
+    }
+
+    public Player getAi2() {
+        return ai2;
+    }
+
+    public Dealer getDealer() {
+        return dealer;
+    }
+
+    public String getStatusMessage() {
+        return statusMessage;
+    }
+
+    public boolean isRoundActive() {
+        return roundActive;
+    }
+
+    public Turn getCurrentTurn() {
+        return currentTurn;
+    }
+
     public boolean startRound(double humanBet) {
         if (humanBet <= 0) {
             statusMessage = "Bet cannot be less than or equals to 0.";
@@ -56,18 +85,17 @@ public class BlackjackGame {
         human.hit(deck);
         ai1.hit(deck);
         ai2.hit(deck);
-        dealer.hit(deck);
+        dealer.dealInitial(deck);
 
         human.hit(deck);
         ai1.hit(deck);
         ai2.hit(deck);
-        dealer.hit(deck);
 
         currentTurn = Turn.HUMAN;
         roundActive = true;
         statusMessage = "Your turn.";
 
-        // if human gets blackjack at start, next player
+        // if human gets blackjack at start they win, go next player
         if (human.getStatus() == Player.Status.BLACKJACK) {
             statusMessage = "You got Blackjack!";
             advanceTurn();
@@ -78,18 +106,18 @@ public class BlackjackGame {
 
     // ai bets
     private void placeAIBets() {
-        // ai1 10 to max bet 
+        // ai1 10 to account balance
         double ai1Bet = Math.min(10, ai1.getAccount().getTotal());
         if (ai1Bet > 0) {
             ai1.placeBet(ai1Bet);
         }
 
-        // ai2 bet 15 to 5 bets
+        // ai2 bet 15 and 5 to account balance bets
         double ai2Bet;
         if (ai2.getAccount().getTotal() >= 15) {
             ai2Bet = 15;
         } else {
-            ai2Bet = 5;
+            ai2Bet = Math.min(5, ai2.getAccount().getTotal());
         }
 
         if (ai2Bet > 0) {
@@ -105,10 +133,10 @@ public class BlackjackGame {
 
         human.hit(deck);
 
-        if (human.getSTatus() == Player.Status.BUST) {
+        if (human.getStatus() == Player.Status.BUST) {
             statusMessage = "You busted.";
             advanceTurn();
-        } else if (human.getSTatus() == Player.Status.BLACKJACK) {
+        } else if (human.getStatus() == Player.Status.BLACKJACK) {
             statusMessage = "You got Blackjack!";
             advanceTurn();
         } else {
@@ -195,7 +223,7 @@ public class BlackjackGame {
         dealer.revealHoleCard();
         statusMessage = "Dealer's turn.";
 
-        // dealer hit 17 or lower
+        // dealer hits below 17 
         while (dealer.getStatus() == Player.Status.PLAYING && dealer.getHandValue() < 17) {
             dealer.hit(deck);
         }
@@ -231,8 +259,51 @@ public class BlackjackGame {
     }
 
     private void resolveRound() {
+        settlePlayer(human);
+        settlePlayer(ai1);
+        settlePlayer(ai2);
+
         currentTurn = Turn.ROUND_OVER;
         roundActive = false;
         statusMessage = "Round over.";
+    }
+
+    private void settlePlayer(Player player) {
+        if (player.getAccount().getCurrentBet() <= 0) {
+            return;
+        }
+
+        if (player.getStatus() == Player.Status.BUST) {
+            player.getAccount().lose();
+            return;
+        }
+
+        if (dealer.getStatus() == Player.Status.BUST) {
+            player.getAccount().win();
+            return;
+        }
+
+        if (player.getStatus() == Player.Status.BLACKJACK && dealer.getStatus() != Player.Status.BLACKJACK) {
+            player.getAccount().blackjackWin();
+            return;
+        }
+
+        if (dealer.getStatus() == Player.Status.BLACKJACK && player.getStatus() != Player.Status.BLACKJACK) {
+            player.getAccount().lose();
+            return;
+        }
+
+        int playerValue = player.getHandValue();
+        int dealerValue = dealer.getHandValue();
+
+
+        if (playerValue > dealerValue) {
+            player.getAccount().win();
+        } else if (playerValue < dealerValue) {
+            player.getAccount().lose();
+        } else {
+            player.getAccount().push();
+        }
+
     }
 }
