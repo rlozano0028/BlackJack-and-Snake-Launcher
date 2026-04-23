@@ -16,15 +16,19 @@ public class GamePane extends Pane {
     private Canvas canvas;
     private GraphicsContext gc;
     private ArrayList<Position> snakePositions;
-    private Direction direction = Direction.RIGHT;
+    // private Direction direction = Direction.RIGHT;
+    private Timeline timeline;
 
     public GamePane() {
         canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT);
         gc = canvas.getGraphicsContext2D();
+        
         snake = new Snake();
+        snakePositions = snake.getPositions();
+        
         fruitSpawner = new FruitSpawner();
         fruit = fruitSpawner.spawnFruit(snake);
-        snakePositions = snake.getPositions();
+        
         getChildren().add(canvas);
 
         setFocusTraversable(true);
@@ -46,7 +50,7 @@ public class GamePane extends Pane {
             }
         });
 
-        Timeline timeline = new Timeline(new KeyFrame(Duration.millis(100), e -> {
+        timeline = new Timeline(new KeyFrame(Duration.millis(100), e -> {
             // switch (direction) {
             //     case UP:
             //         snake.moveUp();
@@ -62,6 +66,19 @@ public class GamePane extends Pane {
             //         break;
             //}
             snake.move();
+
+            //check for snake eat fruit
+            if (snake.getHead().equals(fruit.getPosition())) {
+                snake.grow();
+                fruit = fruitSpawner.spawnFruit(snake);
+            }
+
+            if (snake.checkCollision()) {
+                timeline.stop();
+                gameOver();
+                return;
+            }
+
             redraw();
         }));
 
@@ -109,5 +126,13 @@ public class GamePane extends Pane {
         gc.setFill(Color.RED);
         Position fruitPos = fruit.getPosition();
         gc.fillOval(fruitPos.getX(), fruitPos.getY(), GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
+    }
+
+    private void gameOver() {
+        gc.setFill(Color.BLACK);
+        gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
+
+        gc.setFill(Color.WHITE);
+        gc.fillText("Game Over! \nScore: " + snake.getScore(), GameVariables.WIDTH / 2 - 50, GameVariables.HEIGHT / 2);
     }
 }

@@ -8,6 +8,7 @@ public class Snake{
     private Position head;
     private int length;
     private Direction direction;
+    private boolean growNextMove = false;
     
     public Snake(){
         positions = new ArrayList<>();
@@ -76,9 +77,55 @@ public class Snake{
 
         head = new Position(newX, newY);
         positions.add(head);
+
+        if (!growNextMove) {
+            positions.remove(0);
+        } else {
+            length++;
+            growNextMove = false;
+        }
+
+        // if (checkCollision()) {
+        //     //reset game when collision
+        //     reset(); 
+        // }
     }
 
     public void grow() {
-        length++;
+        // length++;
+        growNextMove = true;
+    }
+
+    public boolean checkSelfCollision() {
+        for (int i = 0; i < positions.size() - 1; i++) {
+            if (head.equals(positions.get(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean checkWallCollision() {
+        return head.getX() < 0 || head.getX() >= GameVariables.WIDTH ||
+               head.getY() < 0 || head.getY() >= GameVariables.HEIGHT;
+    }
+
+    public boolean checkCollision() {
+        return checkSelfCollision() || checkWallCollision();
+    }
+
+    public void restart() {
+        positions.clear();
+        length = 3;
+        positions.add(new Position(25,50));
+        positions.add(new Position(50,50));
+        positions.add(new Position(75,50));
+        head = positions.get(positions.size() - 1);
+        direction = Direction.RIGHT;
+    }
+
+    public int getScore() {
+        //starting length is 3
+        return length - 3;
     }
 }

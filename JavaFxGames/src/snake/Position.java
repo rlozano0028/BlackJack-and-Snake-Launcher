@@ -1,5 +1,7 @@
 package snake;
 
+import java.util.Objects;
+
 public class Position {
     
     private int xPosition;
@@ -24,5 +26,20 @@ public class Position {
     
     public void setY(int yPosition){
         this.yPosition = yPosition;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) 
+            return true;
+        if (!(obj instanceof Position)) 
+            return false;
+        Position other = (Position) obj;
+        return this.xPosition == other.xPosition && this.yPosition == other.yPosition;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(xPosition, yPosition);
     }
 }
