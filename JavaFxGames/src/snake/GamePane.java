@@ -1,29 +1,47 @@
 package snake;
 
-import javafx.scene.paint.Color;
 import java.util.ArrayList;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.Pane;
+import java.io.File;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.image.Image;
+
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
-import javafx.scene.Scene;
 
 public class GamePane extends Pane {
     private Snake snake;
     private Fruit fruit;
     private FruitSpawner fruitSpawner;
+
     private Canvas canvas;
     private GraphicsContext gc;
+    private Image fruitImage;
+
     private ArrayList<Position> snakePositions;
     // private Direction direction = Direction.RIGHT;
     private Timeline timeline;
+
+    private static final String[] FRUIT_IMAGES = new String[]{
+        "JavaFxGames/src/images/ic_apple.png",
+        "JavaFxGames/src/images/ic_berry.png",
+        "JavaFxGames/src/images/ic_orange.png",
+        "JavaFxGames/src/images/ic_cherry.png",
+        "JavaFxGames/src/images/ic_peach.png",
+        "JavaFxGames/src/images/ic_watermelon.png"
+    };
+
 
     public GamePane() {
         canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT);
@@ -33,10 +51,9 @@ public class GamePane extends Pane {
         snakePositions = snake.getPositions();
         
         fruitSpawner = new FruitSpawner();
-        fruit = fruitSpawner.spawnFruit(snake);
+        spawnNewFruit();
         
         getChildren().add(canvas);
-
         setFocusTraversable(true);
 
         setOnKeyPressed(e -> {
@@ -76,7 +93,7 @@ public class GamePane extends Pane {
             //check for snake eat fruit
             if (snake.getHead().equals(fruit.getPosition())) {
                 snake.grow();
-                fruit = fruitSpawner.spawnFruit(snake);
+                spawnNewFruit();
             }
 
             if (snake.checkCollision()) {
@@ -94,11 +111,22 @@ public class GamePane extends Pane {
         redraw();
     }
 
+    private void spawnNewFruit() {
+        fruit = fruitSpawner.spawnFruit(snake);
+
+        String imagePath = FRUIT_IMAGES[(int)(Math.random() * FRUIT_IMAGES.length)];
+        File fruitFile = new File(imagePath);
+
+        fruitImage = new Image(fruitFile.toURI().toString());
+    }
+
     private void redraw() {
         drawGrid();
         drawSnake();
         drawFruit();
     }
+
+    
 
     private void drawGrid() {
         gc.setFill(Color.BLACK);
@@ -129,18 +157,12 @@ public class GamePane extends Pane {
     }
 
     private void drawFruit() {
-        gc.setFill(Color.RED);
         Position fruitPos = fruit.getPosition();
-        gc.fillOval(fruitPos.getX(), fruitPos.getY(), GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
+
+        gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY(), GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
     }
 
     private void gameOver() {
-        // gc.setFill(Color.BLACK);
-        // gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
-
-        // gc.setFill(Color.WHITE);
-        // gc.fillText("Game Over! \nScore: " + snake.getScore(), GameVariables.WIDTH / 2 - 50, GameVariables.HEIGHT / 2);
-
         Stage gameOverStage = new Stage();
         gameOverStage.setTitle("Game Over");
 
@@ -150,7 +172,8 @@ public class GamePane extends Pane {
         Button restartButton = new Button("Restart");
         restartButton.setOnAction(e -> {
             snake.restart();
-            fruit = fruitSpawner.spawnFruit(snake);
+            spawnNewFruit();
+            redraw();
             timeline.play();
             gameOverStage.close();
             requestFocus(); 
