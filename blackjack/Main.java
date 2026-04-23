@@ -152,10 +152,12 @@ public class Main extends Application
 
         HBox header = new HBox(12, name, ai1ScoreLabel);
         header.setAlignment(Pos.CENTER);
+        header.setTranslateY(-30);
 
         ai1CardsBox = new HBox(-24);
         ai1CardsBox.setAlignment(Pos.CENTER);
-        ai1CardsBox.setRotate(-12);
+        ai1CardsBox.setRotate(12);
+        ai1CardsBox.setTranslateY(-20);
 
         ai1BankrollLabel = infoPill("Bankroll", "$100");
         ai1BetLabel = infoPill("Bet", "$0");
@@ -170,6 +172,9 @@ public class Main extends Application
         box.setScaleX(0.8);
         box.setScaleY(0.8);
 
+        // move up or down
+        box.setTranslateY(-60);
+
         return box;
     }
 
@@ -179,10 +184,12 @@ public class Main extends Application
 
         HBox header = new HBox(12, name, ai2ScoreLabel);
         header.setAlignment(Pos.CENTER);
+        header.setTranslateY(-30);
 
-        ai2CardsBox = new HBox(24);
+        ai2CardsBox = new HBox(-24);
         ai2CardsBox.setAlignment(Pos.CENTER);
-        ai2CardsBox.setRotate(12);
+        ai2CardsBox.setRotate(-12);
+        ai2CardsBox.setTranslateY(-20);
 
 
         ai2BankrollLabel = infoPill("Bankroll", "$100");
@@ -197,6 +204,9 @@ public class Main extends Application
         // scale everything down
         box.setScaleX(0.8);
         box.setScaleY(0.8);
+
+         // move up or down
+        box.setTranslateY(-60);
 
         return box;
     }
