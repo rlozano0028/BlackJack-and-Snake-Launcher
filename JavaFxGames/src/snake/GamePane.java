@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.io.File;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
@@ -35,6 +36,10 @@ public class GamePane extends Pane {
     private Timeline timeline;
 
     private boolean paused;
+    private boolean gameOver;
+
+    private Button restartButton;
+    private Button exitButton;
 
     // private static final String[] FRUIT_IMAGES = new String[]{
     // "JavaFxGames/src/images/ic_apple.png",
@@ -62,6 +67,7 @@ public class GamePane extends Pane {
         snakePositions = snake.getPositions();
 
         paused = false;
+        gameOver = false;
 
         fruitSpawner = new FruitSpawner();
         spawnNewFruit();
@@ -84,6 +90,9 @@ public class GamePane extends Pane {
                     snake.setDirection(Direction.RIGHT);
                     break;
                 case ESCAPE:
+                    if(gameOver){
+                        break;
+                    }
                     paused = !paused;
                     if (paused) {
                         timeline.pause();
@@ -91,7 +100,7 @@ public class GamePane extends Pane {
                     } else {
                         timeline.play();
                     }
-
+                    break;
             }
         });
 
@@ -159,6 +168,7 @@ public class GamePane extends Pane {
         gc.fillRect(0, 0, GameVariables.WIDTH, TOP_BAR_HEIGHT);
         gc.setFont(javafx.scene.text.Font.font(15));
         gc.setFill(Color.WHITE);
+        gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
         gc.fillText("Score: " + snake.getScore(), 10, 15);
     }
 
@@ -210,41 +220,80 @@ public class GamePane extends Pane {
 
     private void drawPause() {
         gc.setFill(Color.color(0, 0, 0, 0.4));
+        gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
         gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
         gc.setFont(javafx.scene.text.Font.font(36));
         gc.setFill(Color.WHITE);
-        gc.fillText("PAUSED", GameVariables.WIDTH / 2.0 -60, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT);
+        gc.fillText("PAUSED", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT);
     }
 
     private void gameOver() {
-        Stage gameOverStage = new Stage();
-        gameOverStage.setTitle("Game Over");
+        // Stage gameOverStage = new Stage();
+        // gameOverStage.setTitle("Game Over");
 
-        Label gameOverLabel = new Label("Game Over!!!");
-        Label scoreLabel = new Label("Your Score: " + snake.getScore());
+        // Label gameOverLabel = new Label("Game Over!!!");
+        // Label scoreLabel = new Label("Your Score: " + snake.getScore());
 
-        Button restartButton = new Button("Restart");
+        // Button restartButton = new Button("Restart");
+        // restartButton.setOnAction(e -> {
+        //     snake.restart();
+        //     spawnNewFruit();
+        //     redraw();
+        //     timeline.play();
+        //     gameOverStage.close();
+        //     requestFocus();
+        // });
+
+        // // Need to update and have game exit properly
+        // Button exitButton = new Button("Exit");
+        // exitButton.setOnAction(e -> {
+        //     gameOverStage.close();
+        // });
+
+        // VBox layout = new VBox(15);
+        // layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
+        // layout.getChildren().addAll(gameOverLabel, scoreLabel, restartButton, exitButton);
+
+        // Scene popupScene = new Scene(layout, 200, 180);
+        // gameOverStage.setScene(popupScene);
+        // gameOverStage.show();
+        gameOver = true;
+        showGameOverOverlay();
+    }
+
+    private void showGameOverOverlay() {
+        gc.setFill(Color.color(0, 0, 0, 0.4));
+        gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+
+        gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+        gc.setFill(Color.WHITE);
+
+        gc.setFont(javafx.scene.text.Font.font(36));
+        gc.fillText("GAME OVER", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT - 20);
+
+        gc.setFont(javafx.scene.text.Font.font(20));
+        gc.fillText("Score: " + snake.getScore(), GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
+
+        restartButton = new Button("Restart");
+        restartButton.setPrefWidth(80);
+        restartButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
+        restartButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 40);
+
+        Button exitButton = new Button("Exit");
+        exitButton.setPrefWidth(80);
+        exitButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
+        exitButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 80);
+
         restartButton.setOnAction(e -> {
+            getChildren().removeAll(restartButton, exitButton);
             snake.restart();
             spawnNewFruit();
+            gameOver = false;
             redraw();
             timeline.play();
-            gameOverStage.close();
             requestFocus();
         });
 
-        // Need to update and have game exit properly
-        Button exitButton = new Button("Exit");
-        exitButton.setOnAction(e -> {
-            gameOverStage.close();
-        });
-
-        VBox layout = new VBox(15);
-        layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
-        layout.getChildren().addAll(gameOverLabel, scoreLabel, restartButton, exitButton);
-
-        Scene popupScene = new Scene(layout, 200, 180);
-        gameOverStage.setScene(popupScene);
-        gameOverStage.show();
+        getChildren().addAll(restartButton, exitButton);
     }
 }
