@@ -12,19 +12,20 @@ public class Snake{
     
     public Snake(){
         positions = new ArrayList<>();
-        length = 3;
+        snakeSpawner();
+        // length = 3;
 
         // positions.add(new Position(25,50));
         // positions.add(new Position(50,50));
         // positions.add(new Position(75,50));
         
-        positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
-        positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
-        positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
-        this.direction = Direction.RIGHT;
-        // setHead();
+        // positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
+        // positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
+        // positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
+        // this.direction = Direction.RIGHT;
+        // // setHead();
 
-        head = positions.get(positions.size() - 1);
+        // head = positions.get(positions.size() - 1);
         // direction = Direction.RIGHT;
     }
     public void setHead(Position head){
@@ -120,16 +121,49 @@ public class Snake{
 
     public void restart() {
         positions.clear();
-        length = 3;
+        snakeSpawner();
         // positions.add(new Position(25,50));
         // positions.add(new Position(50,50));
         // positions.add(new Position(75,50));
+    }
+
+    private void snakeSpawner(){
+        length = 3;
+        direction = Direction.getRandomDirection();
         
-        positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
-        positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
-        positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
+        int centerCol = GameVariables.COLS / 2;
+        int centerRow = GameVariables.ROWS / 2;
+
+        int startCol = centerCol + (int)(Math.random() * 3) - 1;
+        int startRow = centerRow + (int)(Math.random() * 3) - 1;
+
+        switch (direction) {
+            case RIGHT:
+                positions.add(new Position((startCol - 2) * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                positions.add(new Position((startCol - 1) * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                break;
+
+            case LEFT:
+                positions.add(new Position((startCol + 2) * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                positions.add(new Position((startCol + 1) * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                break;
+
+            case DOWN:
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, (startRow - 2) * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, (startRow - 1) * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                break;
+
+            case UP:
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, (startRow + 2) * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, (startRow + 1) * GameVariables.TILE_SIZE));
+                positions.add(new Position(startCol * GameVariables.TILE_SIZE, startRow * GameVariables.TILE_SIZE));
+                break;
+        }
+        
         head = positions.get(positions.size() - 1);
-        direction = Direction.RIGHT;
     }
 
     public int getScore() {

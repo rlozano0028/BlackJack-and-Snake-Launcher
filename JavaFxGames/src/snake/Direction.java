@@ -1,5 +1,7 @@
 package snake;
 
+import java.util.Random;
+
 public enum Direction {
     // UP,
     // DOWN,
@@ -38,5 +40,12 @@ public enum Direction {
     //prevents snake from moving into itself 
     public boolean isOpposite(Direction other) {
         return this.dx == -other.dx && this.dy == -other.dy;
+    }
+
+    //spawns snake in random direction
+    public static Direction getRandomDirection() {
+        Direction[] directions = values();
+        int index = new Random().nextInt(directions.length);
+        return directions[index];
     }
 }

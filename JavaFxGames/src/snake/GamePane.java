@@ -24,10 +24,12 @@ public class GamePane extends Pane {
     private Snake snake;
     private Fruit fruit;
     private FruitSpawner fruitSpawner;
+    private double speed = 100;
 
     private Canvas canvas;
     private GraphicsContext gc;
     private Image fruitImage;
+    public static final int TOP_BAR_HEIGHT = 25;
 
     private ArrayList<Position> snakePositions;
     // private Direction direction = Direction.RIGHT;
@@ -44,7 +46,7 @@ public class GamePane extends Pane {
 
 
     public GamePane() {
-        canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT);
+        canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT + TOP_BAR_HEIGHT);
         gc = canvas.getGraphicsContext2D();
         
         snake = new Snake();
@@ -73,7 +75,11 @@ public class GamePane extends Pane {
             }
         });
 
-        timeline = new Timeline(new KeyFrame(Duration.millis(100), e -> {
+        createTimeline();
+    }
+
+    private void createTimeline(){
+        timeline = new Timeline(new KeyFrame(Duration.millis(speed), e -> {
             // switch (direction) {
             //     case UP:
             //         snake.moveUp();
@@ -94,6 +100,7 @@ public class GamePane extends Pane {
             if (snake.getHead().equals(fruit.getPosition())) {
                 snake.grow();
                 spawnNewFruit();
+                increaseSpeed();
             }
 
             if (snake.checkCollision()) {
@@ -111,6 +118,18 @@ public class GamePane extends Pane {
         redraw();
     }
 
+    //increase snake speed when fruit is eaten
+    private void increaseSpeed() {
+        speed -= 3;
+
+        if (speed < 50) {
+            speed = 50;
+        }
+
+        timeline.stop();
+        createTimeline();
+    }
+
     private void spawnNewFruit() {
         fruit = fruitSpawner.spawnFruit(snake);
 
@@ -121,6 +140,8 @@ public class GamePane extends Pane {
     }
 
     private void redraw() {
+        drawTopBar();
+        drawBorder();
         drawGrid();
         drawSnake();
         drawFruit();
@@ -142,6 +163,20 @@ public class GamePane extends Pane {
     //     }
     // }
 
+    private void drawTopBar(){
+        gc.setFill(Color.BLACK);
+        gc.fillRect(0, 0, GameVariables.WIDTH, TOP_BAR_HEIGHT);
+
+        gc.setFill(Color.WHITE);
+        gc.fillText("Score: " + snake.getScore(), 10, 15);
+    }
+
+    private void drawBorder(){
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(2);
+        gc.strokeRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+    }
+
     private void drawGrid() {
         for (int row = 0; row < GameVariables.ROWS; row++) {
             for (int col = 0; col < GameVariables.COLS; col++) {
@@ -154,7 +189,7 @@ public class GamePane extends Pane {
 
                 gc.fillRect(
                     col * GameVariables.TILE_SIZE,
-                    row * GameVariables.TILE_SIZE,
+                    row * GameVariables.TILE_SIZE + TOP_BAR_HEIGHT,
                     GameVariables.TILE_SIZE,
                     GameVariables.TILE_SIZE
                 );
@@ -169,7 +204,7 @@ public class GamePane extends Pane {
         for (int i = 1; i <= snake.getLength(); i++) {
             Position curr = snakePositions.get(snakePositions.size() - i);
             int x = curr.getX();
-            int y = curr.getY();
+            int y = curr.getY() + TOP_BAR_HEIGHT;
 
             gc.fillRect(x, y, GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
         }
@@ -178,7 +213,7 @@ public class GamePane extends Pane {
     private void drawFruit() {
         Position fruitPos = fruit.getPosition();
 
-        gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY(), GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
+        gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY() + TOP_BAR_HEIGHT, GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
     }
 
     private void gameOver() {
