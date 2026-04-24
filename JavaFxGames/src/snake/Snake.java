@@ -13,28 +13,8 @@ public class Snake{
     public Snake(){
         positions = new ArrayList<>();
         snakeSpawner();
-        // length = 3;
-
-        // positions.add(new Position(25,50));
-        // positions.add(new Position(50,50));
-        // positions.add(new Position(75,50));
-        
-        // positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
-        // positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
-        // positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
-        // this.direction = Direction.RIGHT;
-        // // setHead();
-
-        // head = positions.get(positions.size() - 1);
-        // direction = Direction.RIGHT;
     }
     public void setHead(Position head){
-        // head = positions.get(positions.size() -1);
-
-        // head = new Position( 
-        //     head.getX() + direction.getDx() * GameVariables.TILE_SIZE,
-        //     head.getY() + direction.getDy() * GameVariables.TILE_SIZE
-        // );
 
         this.head = head;
     }
@@ -44,9 +24,7 @@ public class Snake{
     public int getLength(){
         return length;
     }
-    // public void setDirection(Direction newDirection){
-    //     direction = newDirection;
-    // }
+ 
     public Position getHead(){
         return head;
     }
@@ -58,22 +36,6 @@ public class Snake{
     public Direction getDirection(){
         return direction;
     }
-    // public void moveLeft(){
-    //     head = new Position(head.getX() - GameVariables.TILE_SIZE, head.getY());
-    //     positions.add(head);
-    // }
-    // public void moveRight(){
-    //     head = new Position(head.getX() + GameVariables.TILE_SIZE, head.getY());
-    //     positions.add(head);
-    // }
-    // public void moveDown(){
-    //     head = new Position(head.getX(), head.getY() + GameVariables.TILE_SIZE);
-    //     positions.add(head);
-    // }
-    // public void moveUp(){
-    //     head = new Position(head.getX(), head.getY() - GameVariables.TILE_SIZE);
-    //     positions.add(head);
-    // }
 
     //simplified move method
     public void move() {
@@ -122,9 +84,6 @@ public class Snake{
     public void restart() {
         positions.clear();
         snakeSpawner();
-        // positions.add(new Position(25,50));
-        // positions.add(new Position(50,50));
-        // positions.add(new Position(75,50));
     }
 
     private void snakeSpawner(){
