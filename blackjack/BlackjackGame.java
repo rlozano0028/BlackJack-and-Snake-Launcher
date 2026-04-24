@@ -241,13 +241,9 @@ public class BlackjackGame {
     }
 
     private void dealerTurn() {
-        dealer.revealHoleCard();
         statusMessage = "Dealer's turn.";
 
-        // dealer hits below 17 
-        while (dealer.getStatus() == Player.Status.PLAYING && dealer.getHandValue() < 17) {
-            dealer.hit(deck);
-        }
+        dealer.playTurn(deck);
 
         if (dealer.getStatus() == Player.Status.PLAYING) {
             dealer.stand();
