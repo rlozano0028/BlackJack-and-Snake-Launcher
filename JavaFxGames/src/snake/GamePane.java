@@ -35,13 +35,22 @@ public class GamePane extends Pane {
     // private Direction direction = Direction.RIGHT;
     private Timeline timeline;
 
-    private static final String[] FRUIT_IMAGES = new String[]{
-        "JavaFxGames/src/images/ic_apple.png",
-        "JavaFxGames/src/images/ic_berry.png",
-        "JavaFxGames/src/images/ic_orange.png",
-        "JavaFxGames/src/images/ic_cherry.png",
-        "JavaFxGames/src/images/ic_peach.png",
-        "JavaFxGames/src/images/ic_watermelon.png"
+    // private static final String[] FRUIT_IMAGES = new String[]{
+    //     "JavaFxGames/src/images/ic_apple.png",
+    //     "JavaFxGames/src/images/ic_berry.png",
+    //     "JavaFxGames/src/images/ic_orange.png",
+    //     "JavaFxGames/src/images/ic_cherry.png",
+    //     "JavaFxGames/src/images/ic_peach.png",
+    //     "JavaFxGames/src/images/ic_watermelon.png"
+    // };
+
+    private static final String[] FRUIT_IMAGES = {
+        "/images/ic_apple.png",
+        "/images/ic_berry.png",
+        "/images/ic_orange.png",
+        "/images/ic_cherry.png",
+        "/images/ic_peach.png",
+        "/images/ic_watermelon.png"
     };
 
 
@@ -134,17 +143,18 @@ public class GamePane extends Pane {
         fruit = fruitSpawner.spawnFruit(snake);
 
         String imagePath = FRUIT_IMAGES[(int)(Math.random() * FRUIT_IMAGES.length)];
-        File fruitFile = new File(imagePath);
+        // File fruitFile = new File(imagePath);
 
-        fruitImage = new Image(fruitFile.toURI().toString());
+        // fruitImage = new Image(fruitFile.toURI().toString());
+        fruitImage = new Image(getClass().getResourceAsStream(imagePath));
     }
 
     private void redraw() {
         drawTopBar();
-        drawBorder();
         drawGrid();
         drawSnake();
         drawFruit();
+        drawBorder();
     }
 
     // private void drawGrid() {
@@ -172,9 +182,10 @@ public class GamePane extends Pane {
     }
 
     private void drawBorder(){
+        // gc.setStroke(Color.web("#2f924b"));
         gc.setStroke(Color.BLACK);
-        gc.setLineWidth(2);
-        gc.strokeRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        gc.setLineWidth(3);
+        gc.strokeRect(1, TOP_BAR_HEIGHT + 1, GameVariables.WIDTH - 2, GameVariables.HEIGHT - 2);
     }
 
     private void drawGrid() {
