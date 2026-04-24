@@ -34,6 +34,21 @@ public class Bets
         return true;
     }
 
+    /**
+     * Adds more chips from bankroll to the wager (mid-hand raise).
+     * @return false if amount is invalid or exceeds available bankroll
+     */
+    public boolean raiseBet(double additional) 
+    {
+        if (additional <= 0 || additional > total) 
+        {
+            return false;
+        }
+        total -= additional;
+        currentBet += additional;
+        return true;
+    }
+
     public void win() 
     {
         total += currentBet * 2;

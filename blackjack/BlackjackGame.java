@@ -154,6 +154,27 @@ public class BlackjackGame {
         advanceTurn();
     }
 
+    /**
+     * Adds {@code additional} from bankroll to the current wager during the human turn.
+     * @return true if the raise was applied
+     */
+    public boolean humanRaiseBet(double additional) {
+        if (!roundActive || currentTurn != Turn.HUMAN) {
+            statusMessage = "You can't raise your bet right now.";
+            return false;
+        }
+        if (human.getStatus() != Player.Status.PLAYING) {
+            statusMessage = "You can only raise while your hand is still in play.";
+            return false;
+        }
+        if (!human.raiseBet(additional)) {
+            statusMessage = "Not enough bankroll for that raise.";
+            return false;
+        }
+        statusMessage = "Bet increased.";
+        return true;
+    }
+
     public void advanceTurn() {
         if (!roundActive) {
             return;

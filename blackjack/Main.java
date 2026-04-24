@@ -1,11 +1,11 @@
-import java.beans.VetoableChangeListenerProxy;
-
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -56,6 +56,8 @@ public class Main extends Application
     private Button hit;
     private Button stand;
     private Button reset;
+    private Spinner<Integer> raiseSpinner;
+    private Button raiseBetBtn;
 
 
     @Override
@@ -229,8 +231,9 @@ public class Main extends Application
 
         HBox infoRow = buildInfoRow();
         HBox buttonRow = buildButtonRow();
+        HBox raiseRow = buildRaiseRow();
 
-        VBox box = new VBox(12, playerCardsBox, header, infoRow, buttonRow);
+        VBox box = new VBox(12, playerCardsBox, header, infoRow, buttonRow, raiseRow);
         box.setAlignment(Pos.CENTER);
         box.setPadding(new Insets(10, 0, 0, 0));
         return box;
@@ -294,6 +297,30 @@ public class Main extends Application
         return row;
     }
 
+    private HBox buildRaiseRow() {
+        Label lbl = new Label("Raise by ($):");
+        lbl.setTextFill(Color.web("#f1faee"));
+        lbl.setFont(Font.font("Arial", FontWeight.BOLD, 13));
+
+        raiseSpinner = new Spinner<>();
+        raiseSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10, 5));
+        raiseSpinner.setEditable(true);
+        raiseSpinner.setPrefWidth(100);
+
+        raiseBetBtn = actionButton("Raise bet", "#8e44ad");
+        raiseBetBtn.setPrefWidth(120);
+        raiseBetBtn.setOnAction(e -> {
+            int amt = raiseSpinner.getValue();
+            game.humanRaiseBet(amt);
+            updateUI();
+        });
+
+        HBox row = new HBox(10, lbl, raiseSpinner, raiseBetBtn);
+        row.setAlignment(Pos.CENTER);
+        row.setPadding(new Insets(4, 0, 0, 0));
+        return row;
+    }
+
     // --- update ui ------------------------------
     private void updateUI() {
         messageLabel.setText(game.getStatusMessage());
@@ -325,6 +352,23 @@ public class Main extends Application
 
         // checks if human turn
         boolean humanTurn = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
+        int bankFloor = (int) Math.floor(game.getHuman().getAccount().getTotal());
+        boolean canRaise = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
+
+        if (canRaise) {
+            SpinnerValueFactory.IntegerSpinnerValueFactory fac =
+                (SpinnerValueFactory.IntegerSpinnerValueFactory) raiseSpinner.getValueFactory();
+            fac.setMax(bankFloor);
+            fac.setMin(1);
+            if (fac.getValue() > bankFloor) {
+                fac.setValue(bankFloor);
+            }
+            raiseSpinner.setDisable(false);
+            raiseBetBtn.setDisable(false);
+        } else {
+            raiseSpinner.setDisable(true);
+            raiseBetBtn.setDisable(true);
+        }
 
         // turn off button if not human turn
         hit.setDisable(!humanTurn);

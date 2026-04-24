@@ -25,6 +25,11 @@ public class Player
         return account.placeBet(amount);
     }
 
+    public boolean raiseBet(double additional) 
+    {
+        return account.raiseBet(additional);
+    }
+
     public Bets getAccount() 
     {
         return account;
