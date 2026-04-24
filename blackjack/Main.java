@@ -59,6 +59,8 @@ public class Main extends Application
     private Spinner<Integer> raiseSpinner;
     private Button raiseBetBtn;
 
+    private int raiseAmt;
+
 
     @Override
     public void start(Stage stage) 
@@ -264,7 +266,7 @@ public class Main extends Application
         deal.setOnAction(e  -> {
             
             System.out.println("Deal clicked");
-            game.startRound(10);
+            game.startRound(raiseAmt);
             updateUI();
 
         });
@@ -310,8 +312,8 @@ public class Main extends Application
         raiseBetBtn = actionButton("Raise bet", "#8e44ad");
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
-            int amt = raiseSpinner.getValue();
-            game.humanRaiseBet(amt);
+            raiseAmt = raiseSpinner.getValue();
+            game.humanRaiseBet(raiseAmt);
             updateUI();
         });
 
