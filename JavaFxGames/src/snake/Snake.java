@@ -14,9 +14,13 @@ public class Snake{
         positions = new ArrayList<>();
         length = 3;
 
-        positions.add(new Position(25,50));
-        positions.add(new Position(50,50));
-        positions.add(new Position(75,50));
+        // positions.add(new Position(25,50));
+        // positions.add(new Position(50,50));
+        // positions.add(new Position(75,50));
+        
+        positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
+        positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
+        positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
         this.direction = Direction.RIGHT;
         // setHead();
 
@@ -117,9 +121,13 @@ public class Snake{
     public void restart() {
         positions.clear();
         length = 3;
-        positions.add(new Position(25,50));
-        positions.add(new Position(50,50));
-        positions.add(new Position(75,50));
+        // positions.add(new Position(25,50));
+        // positions.add(new Position(50,50));
+        // positions.add(new Position(75,50));
+        
+        positions.add(new Position(GameVariables.TILE_SIZE, GameVariables.TILE_SIZE * 2));
+        positions.add(new Position(GameVariables.TILE_SIZE * 2, GameVariables.TILE_SIZE * 2));
+        positions.add(new Position(GameVariables.TILE_SIZE * 3, GameVariables.TILE_SIZE * 2));
         head = positions.get(positions.size() - 1);
         direction = Direction.RIGHT;
     }

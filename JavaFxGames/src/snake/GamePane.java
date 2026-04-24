@@ -126,26 +126,45 @@ public class GamePane extends Pane {
         drawFruit();
     }
 
-    
+    // private void drawGrid() {
+    //     gc.setFill(Color.BLACK);
+    //     gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
+
+    //     gc.setStroke(Color.WHITE);
+    //     gc.setLineWidth(0.5);
+
+    //     for (int x = 0; x <= GameVariables.WIDTH; x += GameVariables.TILE_SIZE) {
+    //         gc.strokeLine(x, 0, x, GameVariables.HEIGHT);
+    //     }
+
+    //     for (int y = 0; y <= GameVariables.HEIGHT; y += GameVariables.TILE_SIZE) {
+    //         gc.strokeLine(0, y, GameVariables.WIDTH, y);
+    //     }
+    // }
 
     private void drawGrid() {
-        gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, GameVariables.WIDTH, GameVariables.HEIGHT);
+        for (int row = 0; row < GameVariables.ROWS; row++) {
+            for (int col = 0; col < GameVariables.COLS; col++) {
 
-        gc.setStroke(Color.WHITE);
-        gc.setLineWidth(0.5);
+                if ((row + col) % 2 == 0) {
+                    gc.setFill(Color.web("#AAD751")); 
+                } else {
+                    gc.setFill(Color.web("#A2D149")); 
+                }
 
-        for (int x = 0; x <= GameVariables.WIDTH; x += GameVariables.TILE_SIZE) {
-            gc.strokeLine(x, 0, x, GameVariables.HEIGHT);
-        }
-
-        for (int y = 0; y <= GameVariables.HEIGHT; y += GameVariables.TILE_SIZE) {
-            gc.strokeLine(0, y, GameVariables.WIDTH, y);
+                gc.fillRect(
+                    col * GameVariables.TILE_SIZE,
+                    row * GameVariables.TILE_SIZE,
+                    GameVariables.TILE_SIZE,
+                    GameVariables.TILE_SIZE
+                );
+            }
         }
     }
 
     private void drawSnake() {
-        gc.setFill(Color.LIGHTGREEN);
+        // gc.setFill(Color.BLUE);
+        gc.setFill(Color.web("#4371A0"));
 
         for (int i = 1; i <= snake.getLength(); i++) {
             Position curr = snakePositions.get(snakePositions.size() - i);
