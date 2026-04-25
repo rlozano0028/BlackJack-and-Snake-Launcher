@@ -22,6 +22,11 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+
+import java.nio.file.Paths;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+
 import javafx.stage.Stage;
 
 // Visual-only scaffolding. No game logic wired in yet.
@@ -82,6 +87,21 @@ public class Main extends Application
         stage.setMinHeight(700);
         stage.show();
         updateUI();
+
+        try {
+            music();
+        } catch (Exception e) {
+            System.out.println("Music not found/loaded.");
+        }
+    }
+    
+    // music player
+    MediaPlayer mediaPlayer;
+    public void music() {
+        String s = "../sound/Balatro-Main-Theme.mp3";
+        Media h = new Media(Paths.get(s).toUri().toString());
+        mediaPlayer = new MediaPlayer(h);
+        mediaPlayer.play();
     }
 
     // --- Dealer zone (top) -------------------------------------------------
