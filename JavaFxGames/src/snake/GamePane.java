@@ -1,10 +1,10 @@
 package snake;
 
 import java.util.ArrayList;
-import java.io.File;
+// import java.io.File;
 
 import javafx.animation.KeyFrame;
-import javafx.animation.PauseTransition;
+// import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
@@ -14,18 +14,19 @@ import javafx.scene.paint.Color;
 import javafx.scene.image.Image;
 
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+// import javafx.scene.layout.VBox;
+// import javafx.scene.Scene;
+// import javafx.stage.Stage;
 
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+// import javafx.scene.control.Label;
 
 public class GamePane extends Pane {
     private Snake snake;
     private Fruit fruit;
     private FruitSpawner fruitSpawner;
-    private double speed = 100;
+    private static final int INITIAL_SPEED = 100;
+    private double speed = INITIAL_SPEED;
 
     private Canvas canvas;
     private GraphicsContext gc;
@@ -166,10 +167,13 @@ public class GamePane extends Pane {
     private void drawTopBar() {
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, GameVariables.WIDTH, TOP_BAR_HEIGHT);
+        
         gc.setFont(javafx.scene.text.Font.font(15));
         gc.setFill(Color.WHITE);
         gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
-        gc.fillText("Score: " + snake.getScore(), 10, 15);
+        gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+        
+        gc.fillText("Score: " + snake.getScore(), 10, TOP_BAR_HEIGHT / 2);
     }
 
     private void drawBorder() {
@@ -286,6 +290,7 @@ public class GamePane extends Pane {
 
         restartButton.setOnAction(e -> {
             getChildren().removeAll(restartButton, exitButton);
+            speed = INITIAL_SPEED;
             snake.restart();
             spawnNewFruit();
             gameOver = false;
