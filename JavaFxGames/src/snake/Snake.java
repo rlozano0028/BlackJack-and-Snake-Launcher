@@ -2,7 +2,7 @@ package snake;
 
 import java.util.ArrayList;
 
-public class Snake{
+public class Snake implements Resettable {
 
     private ArrayList<Position> positions;
     private Position head;
