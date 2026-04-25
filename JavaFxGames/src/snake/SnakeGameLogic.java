@@ -1,0 +1,97 @@
+package snake;
+
+public class SnakeGameLogic implements Resettable {
+    private static final double INITIAL_SPEED = 100;
+    private static final double MIN_SPEED = 50;
+
+    private Snake snake;
+    private Fruit fruit;
+    private FruitSpawner fruitSpawner;
+    private double speed;
+    private boolean paused;
+    private boolean gameOver;
+
+    public SnakeGameLogic() {
+        fruitSpawner = new FruitSpawner();
+        restart();
+    }
+
+    public boolean update() {
+        if (paused || gameOver) {
+            return false;
+        }
+
+        snake.move();
+
+        boolean ateFruit = false;
+
+        if (snake.getHead().equals(fruit.getPosition())) {
+            snake.grow();
+            spawnNewFruit();
+            increaseSpeed();
+            ateFruit = true;
+        }
+
+        if (snake.checkCollision()) {
+            gameOver = true;
+        }
+
+        return ateFruit;
+    }
+
+    private void spawnNewFruit() {
+        fruit = fruitSpawner.spawnFruit(snake);
+    }
+
+    private void increaseSpeed() {
+        speed -= 3;
+
+        if (speed < MIN_SPEED) {
+            speed = MIN_SPEED;
+        }
+    }
+
+    @Override
+    public void restart() {
+        snake = new Snake();
+        spawnNewFruit();
+        speed = INITIAL_SPEED;
+        paused = false;
+        gameOver = false;
+    }
+
+    public void setDirection(Direction direction) {
+        snake.setDirection(direction);
+    }
+
+    public Snake getSnake() {
+        return snake;
+    }
+
+    public Fruit getFruit() {
+        return fruit;
+    }
+
+    public double getSpeed() {
+        return speed;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void togglePause() {
+        if (!gameOver) {
+            paused = !paused;
+        }
+    }
+
+    public int getScore() {
+        return snake.getScore();
+    }
+    
+}

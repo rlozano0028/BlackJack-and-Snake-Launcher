@@ -21,8 +21,8 @@ public enum Direction {
     UP(0, -1),
     DOWN(0, 1);
 
-    private int dx;
-    private int dy;
+    private final int dx;
+    private final int dy;
 
     Direction(int dx, int dy) {
         this.dx = dx;

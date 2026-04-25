@@ -15,7 +15,6 @@ public class Snake implements Resettable {
         snakeSpawner();
     }
     public void setHead(Position head){
-
         this.head = head;
     }
     public ArrayList<Position> getPositions(){

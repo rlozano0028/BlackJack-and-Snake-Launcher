@@ -1,6 +1,6 @@
 package snake;
 
-import java.util.ArrayList;
+// import java.util.ArrayList;
 // import java.io.File;
 
 import javafx.animation.KeyFrame;
@@ -22,25 +22,27 @@ import javafx.scene.control.Button;
 // import javafx.scene.control.Label;
 
 public class GamePane extends Pane {
-    private Snake snake;
-    private Fruit fruit;
-    private FruitSpawner fruitSpawner;
-    private static final int INITIAL_SPEED = 100;
-    private double speed = INITIAL_SPEED;
+    // private Snake snake;
+    // private Fruit fruit;
+    // private FruitSpawner fruitSpawner;
+    // private static final int INITIAL_SPEED = 100;
+    // private double speed = INITIAL_SPEED;
+
+    private SnakeGameLogic gameLogic;
 
     private Canvas canvas;
     private GraphicsContext gc;
     private Image fruitImage;
     public static final int TOP_BAR_HEIGHT = 25;
 
-    private ArrayList<Position> snakePositions;
+    // private ArrayList<Position> snakePositions;
     private Timeline timeline;
 
-    private boolean paused;
-    private boolean gameOver;
+    // private boolean paused;
+    // private boolean gameOver;
 
     private Button restartButton;
-    private Button exitButton;
+    // private Button exitButton;
 
     // private static final String[] FRUIT_IMAGES = new String[]{
     // "JavaFxGames/src/images/ic_apple.png",
@@ -64,14 +66,17 @@ public class GamePane extends Pane {
         canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT + TOP_BAR_HEIGHT);
         gc = canvas.getGraphicsContext2D();
 
-        snake = new Snake();
-        snakePositions = snake.getPositions();
+        // snake = new Snake();
+        // snakePositions = snake.getPositions();
 
-        paused = false;
-        gameOver = false;
+        // paused = false;
+        // gameOver = false;
 
-        fruitSpawner = new FruitSpawner();
-        spawnNewFruit();
+        // fruitSpawner = new FruitSpawner();
+        // spawnNewFruit();
+
+        gameLogic = new SnakeGameLogic();
+        loadRandomFruitImage();
 
         getChildren().add(canvas);
         setFocusTraversable(true);
@@ -79,23 +84,23 @@ public class GamePane extends Pane {
         setOnKeyPressed(e -> {
             switch (e.getCode()) {
                 case UP:
-                    snake.setDirection(Direction.UP);
+                    gameLogic.setDirection(Direction.UP);
                     break;
                 case DOWN:
-                    snake.setDirection(Direction.DOWN);
+                    gameLogic.setDirection(Direction.DOWN);
                     break;
                 case LEFT:
-                    snake.setDirection(Direction.LEFT);
+                    gameLogic.setDirection(Direction.LEFT);
                     break;
                 case RIGHT:
-                    snake.setDirection(Direction.RIGHT);
+                    gameLogic.setDirection(Direction.RIGHT);
                     break;
                 case ESCAPE:
-                    if(gameOver){
+                    if (gameLogic.isGameOver()) {
                         break;
                     }
-                    paused = !paused;
-                    if (paused) {
+                    gameLogic.togglePause();
+                    if (gameLogic.isPaused()) {
                         timeline.pause();
                         drawPause();
                     } else {
@@ -108,51 +113,85 @@ public class GamePane extends Pane {
         createTimeline();
     }
 
+    // private void createTimeline() {
+    //     timeline = new Timeline(new KeyFrame(Duration.millis(speed), e -> {
+    //         snake.move();
+
+    //         // check for snake eat fruit
+    //         if (snake.getHead().equals(fruit.getPosition())) {
+    //             snake.grow();
+    //             spawnNewFruit();
+    //             increaseSpeed();
+    //         }
+
+    //         if (snake.checkCollision()) {
+    //             timeline.stop();
+    //             gameOver();
+    //             return;
+    //         }
+
+    //         redraw();
+    //     }));
+
+    //     timeline.setCycleCount(Timeline.INDEFINITE);
+    //     timeline.play();
+
+    //     redraw();
+    // }
+
     private void createTimeline() {
-        timeline = new Timeline(new KeyFrame(Duration.millis(speed), e -> {
-            snake.move();
+        timeline = new Timeline(new KeyFrame(Duration.millis(gameLogic.getSpeed()), e -> {
+            double oldSpeed = gameLogic.getSpeed();
+            boolean ateFruit = gameLogic.update();
 
-            // check for snake eat fruit
-            if (snake.getHead().equals(fruit.getPosition())) {
-                snake.grow();
-                spawnNewFruit();
-                increaseSpeed();
-            }
-
-            if (snake.checkCollision()) {
+            if (gameLogic.isGameOver()) {
                 timeline.stop();
-                gameOver();
+                showGameOverOverlay();
                 return;
             }
 
+            if (ateFruit) {
+                loadRandomFruitImage();
+            }
+
             redraw();
+
+            if (gameLogic.getSpeed() != oldSpeed) {
+                timeline.stop();
+                redraw();
+                createTimeline();
+                return;
+            }
         }));
 
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
-
-        redraw();
     }
 
     // increase snake speed when fruit is eaten
-    private void increaseSpeed() {
-        speed -= 3;
+    // private void increaseSpeed() {
+    //     speed -= 3;
 
-        if (speed < 50) {
-            speed = 50;
-        }
+    //     if (speed < 50) {
+    //         speed = 50;
+    //     }
 
-        timeline.stop();
-        createTimeline();
-    }
+    //     timeline.stop();
+    //     createTimeline();
+    // }
 
-    private void spawnNewFruit() {
-        fruit = fruitSpawner.spawnFruit(snake);
+    // private void spawnNewFruit() {
+    //     fruit = fruitSpawner.spawnFruit(snake);
 
+    //     String imagePath = FRUIT_IMAGES[(int) (Math.random() * FRUIT_IMAGES.length)];
+    //     // File fruitFile = new File(imagePath);
+
+    //     // fruitImage = new Image(fruitFile.toURI().toString());
+    //     fruitImage = new Image(getClass().getResourceAsStream(imagePath));
+    // }
+
+    private void loadRandomFruitImage() {
         String imagePath = FRUIT_IMAGES[(int) (Math.random() * FRUIT_IMAGES.length)];
-        // File fruitFile = new File(imagePath);
-
-        // fruitImage = new Image(fruitFile.toURI().toString());
         fruitImage = new Image(getClass().getResourceAsStream(imagePath));
     }
 
@@ -173,14 +212,14 @@ public class GamePane extends Pane {
         gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
         gc.setTextBaseline(javafx.geometry.VPos.CENTER);
         
-        gc.fillText("Score: " + snake.getScore(), 10, TOP_BAR_HEIGHT / 2);
+        gc.fillText("Score: " + gameLogic.getScore(), 10, TOP_BAR_HEIGHT / 2);
     }
 
     private void drawBorder() {
         // gc.setStroke(Color.web("#2f924b"));
         gc.setStroke(Color.BLACK);
-        gc.setLineWidth(3);
-        gc.strokeRect(1, TOP_BAR_HEIGHT + 1, GameVariables.WIDTH - 2, GameVariables.HEIGHT - 2);
+        gc.setLineWidth(1);
+        gc.strokeRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
     }
 
     private void drawGrid() {
@@ -206,7 +245,10 @@ public class GamePane extends Pane {
         // gc.setFill(Color.BLUE);
         gc.setFill(Color.web("#4371A0"));
 
-        for (int i = 1; i <= snake.getLength(); i++) {
+        var snakePositions = gameLogic.getSnake().getPositions();
+        int length = gameLogic.getSnake().getLength();
+
+        for (int i = 1; i <= length; i++) {
             Position curr = snakePositions.get(snakePositions.size() - i);
             int x = curr.getX();
             int y = curr.getY() + TOP_BAR_HEIGHT;
@@ -216,7 +258,7 @@ public class GamePane extends Pane {
     }
 
     private void drawFruit() {
-        Position fruitPos = fruit.getPosition();
+        Position fruitPos = gameLogic.getFruit().getPosition();
 
         gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY() + TOP_BAR_HEIGHT, GameVariables.TILE_SIZE,
                 GameVariables.TILE_SIZE);
@@ -231,39 +273,40 @@ public class GamePane extends Pane {
         gc.fillText("PAUSED", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT);
     }
 
-    private void gameOver() {
-        // Stage gameOverStage = new Stage();
-        // gameOverStage.setTitle("Game Over");
+    // private void gameOver() {
+    //     // Stage gameOverStage = new Stage();
+    //     // gameOverStage.setTitle("Game Over");
 
-        // Label gameOverLabel = new Label("Game Over!!!");
-        // Label scoreLabel = new Label("Your Score: " + snake.getScore());
+    //     // Label gameOverLabel = new Label("Game Over!!!");
+    //     // Label scoreLabel = new Label("Your Score: " + snake.getScore());
 
-        // Button restartButton = new Button("Restart");
-        // restartButton.setOnAction(e -> {
-        //     snake.restart();
-        //     spawnNewFruit();
-        //     redraw();
-        //     timeline.play();
-        //     gameOverStage.close();
-        //     requestFocus();
-        // });
+    //     // Button restartButton = new Button("Restart");
+    //     // restartButton.setOnAction(e -> {
+    //     //     snake.restart();
+    //     //     spawnNewFruit();
+    //     //     redraw();
+    //     //     timeline.play();
+    //     //     gameOverStage.close();
+    //     //     requestFocus();
+    //     // });
 
-        // // Need to update and have game exit properly
-        // Button exitButton = new Button("Exit");
-        // exitButton.setOnAction(e -> {
-        //     gameOverStage.close();
-        // });
+    //     // // Need to update and have game exit properly
+    //     // Button exitButton = new Button("Exit");
+    //     // exitButton.setOnAction(e -> {
+    //     //     gameOverStage.close();
+    //     // });
 
-        // VBox layout = new VBox(15);
-        // layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
-        // layout.getChildren().addAll(gameOverLabel, scoreLabel, restartButton, exitButton);
+    //     // VBox layout = new VBox(15);
+    //     // layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
+    //     // layout.getChildren().addAll(gameOverLabel, scoreLabel, restartButton, exitButton);
 
-        // Scene popupScene = new Scene(layout, 200, 180);
-        // gameOverStage.setScene(popupScene);
-        // gameOverStage.show();
-        gameOver = true;
-        showGameOverOverlay();
-    }
+    //     // Scene popupScene = new Scene(layout, 200, 180);
+    //     // gameOverStage.setScene(popupScene);
+    //     // gameOverStage.show();
+
+    //     // gameOver = true;
+    //     showGameOverOverlay();
+    // }
 
     private void showGameOverOverlay() {
         gc.setFill(Color.color(0, 0, 0, 0.4));
@@ -276,7 +319,7 @@ public class GamePane extends Pane {
         gc.fillText("GAME OVER", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT - 20);
 
         gc.setFont(javafx.scene.text.Font.font(20));
-        gc.fillText("Score: " + snake.getScore(), GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
+        gc.fillText("Score: " + gameLogic.getScore(), GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
 
         restartButton = new Button("Restart");
         restartButton.setPrefWidth(80);
@@ -287,15 +330,18 @@ public class GamePane extends Pane {
         exitButton.setPrefWidth(80);
         exitButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
         exitButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 80);
+        
+        exitButton.setOnAction(e -> {
+            System.exit(0);
+        });
 
         restartButton.setOnAction(e -> {
             getChildren().removeAll(restartButton, exitButton);
-            speed = INITIAL_SPEED;
-            snake.restart();
-            spawnNewFruit();
-            gameOver = false;
+            gameLogic.restart();
+            loadRandomFruitImage();
+            timeline.stop();
+            createTimeline();
             redraw();
-            timeline.play();
             requestFocus();
         });
 
