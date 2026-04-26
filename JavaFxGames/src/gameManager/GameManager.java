@@ -11,6 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -315,7 +316,7 @@ public class GameManager extends Application {
         root.setTop(buildToolBar());
 
         currentBlackjackMain = new Main();
-        BorderPane bjView = currentBlackjackMain.buildView();
+        StackPane bjView = currentBlackjackMain.buildView();
 
         root.setCenter(bjView);
     }
