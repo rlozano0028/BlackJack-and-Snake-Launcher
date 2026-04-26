@@ -1,4 +1,7 @@
+import javafx.animation.RotateTransition;
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -6,11 +9,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -22,31 +26,29 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 
 import javafx.stage.Stage;
 
-// Visual-only scaffolding. No game logic wired in yet.
 public class Main extends Application 
 {
     private BlackjackGame game;
 
-    // outisde so when changed, it changes everywhere
     private Label dealerScoreLabel;
     private Label playerScoreLabel;
     private Label ai1ScoreLabel;
     private Label ai2ScoreLabel;
 
-    //human money
     private Label bankrollLabel;
     private Label betLabel;
-    //ai 2
     private Label ai1BankrollLabel;
     private Label ai1BetLabel;
-    //ai2
     private Label ai2BankrollLabel;
     private Label ai2BetLabel;
 
@@ -67,7 +69,31 @@ public class Main extends Application
     private int raiseAmt;
     private boolean hasPlacedInitialBet;
 
+    // Animation overlay — a transparent Pane that sits on top of everything
+    // so animated cards can fly freely across the full window.
+    private Pane overlayPane;
 
+    // The visual deck pile in the center; used as the animation origin.
+    private StackPane deckNode;
+
+    // -----------------------------------------------------------------------
+    // CardInfo — one entry per card to animate
+    // -----------------------------------------------------------------------
+    private static class CardInfo {
+        final Card   card;
+        final HBox   targetBox;
+        final boolean faceDown;   // true = stay face-down after flip (dealer hole card)
+
+        CardInfo(Card card, HBox targetBox, boolean faceDown) {
+            this.card      = card;
+            this.targetBox = targetBox;
+            this.faceDown  = faceDown;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Application entry point
+    // -----------------------------------------------------------------------
     @Override
     public void start(Stage stage) 
     {
@@ -82,7 +108,15 @@ public class Main extends Application
         root.setCenter(buildCenterArea());
         root.setBottom(buildBottomArea());
 
-        Scene scene = new Scene(root, 1180, 760);
+        // Overlay pane: transparent, mouse-transparent, covers full window
+        overlayPane = new Pane();
+        overlayPane.setMouseTransparent(true);
+        overlayPane.setPickOnBounds(false);
+
+        // Wrap root + overlay so animations fly over everything
+        StackPane sceneRoot = new StackPane(root, overlayPane);
+
+        Scene scene = new Scene(sceneRoot, 1180, 760);
         stage.setTitle("Blackjack");
         stage.setScene(scene);
         stage.setMinWidth(980);
@@ -99,7 +133,9 @@ public class Main extends Application
         updateUI();
     }
     
-    // music player
+    // -----------------------------------------------------------------------
+    // Music
+    // -----------------------------------------------------------------------
     MediaPlayer mediaPlayer;
     public void music() {
         String s = "../sound/Balatro-Main-Theme.mp3";
@@ -107,7 +143,9 @@ public class Main extends Application
         mediaPlayer = new MediaPlayer(h);
     }
 
-    // --- Dealer zone (top) -------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Dealer zone (top)
+    // -----------------------------------------------------------------------
     private VBox buildDealerArea() 
     {
         Label name = sectionLabel("DEALER");
@@ -117,10 +155,6 @@ public class Main extends Application
         header.setAlignment(Pos.CENTER);
 
         dealerCardsBox = new HBox(-30);
-        // dealerCardsBox = new HBox(-30,
-        //     CardView.faceUp("K", "\u2665"),
-        //     CardView.faceDown()
-        // );
         dealerCardsBox.setAlignment(Pos.CENTER);
 
         VBox box = new VBox(12, header, dealerCardsBox);
@@ -129,7 +163,9 @@ public class Main extends Application
         return box;
     }
 
-    // --- Middle banner -----------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Middle banner — also hosts the deck pile
+    // -----------------------------------------------------------------------
     private StackPane buildCenterArea() 
     {
         messageLabel = new Label("PLACE YOUR BET");
@@ -148,7 +184,10 @@ public class Main extends Application
 
         StackPane chipStack = new StackPane(chip, chipAmount);
 
-        VBox center = new VBox(18, messageLabel, chipStack);
+        // Deck pile visual — several face-down cards stacked with slight offset
+        deckNode = buildDeckPile();
+
+        VBox center = new VBox(18, messageLabel, chipStack, deckNode);
         center.setAlignment(Pos.CENTER);
 
         StackPane wrapper = new StackPane(center);
@@ -156,11 +195,30 @@ public class Main extends Application
         return wrapper;
     }
 
-    // --- bottom table area ----------
+    // Build a small deck-of-cards visual (5 stacked face-down cards).
+    private StackPane buildDeckPile() {
+        StackPane pile = new StackPane();
+        int layers = 5;
+        for (int i = layers - 1; i >= 0; i--) {
+            CardView c = CardView.faceDown();
+            c.setScaleX(0.72);
+            c.setScaleY(0.72);
+            // slight shadow-stack offset
+            c.setTranslateX(-i * 1.2);
+            c.setTranslateY(-i * 1.2);
+            pile.getChildren().add(c);
+        }
+        pile.setPickOnBounds(false);
+        return pile;
+    }
+
+    // -----------------------------------------------------------------------
+    // Bottom table area
+    // -----------------------------------------------------------------------
     private VBox buildBottomArea() {
-        VBox ai1Area = buildAI1Area();
+        VBox ai1Area    = buildAI1Area();
         VBox playerArea = buildPlayerAndControls();
-        VBox ai2Area = buildAI2Area();
+        VBox ai2Area    = buildAI2Area();
 
         HBox row = new HBox(40, ai1Area, playerArea, ai2Area);
         row.setAlignment(Pos.BOTTOM_CENTER);
@@ -169,10 +227,11 @@ public class Main extends Application
         wrapper.setAlignment(Pos.CENTER);
         wrapper.setPadding(new Insets(10, 0, 0, 0));
         return wrapper;
-
     }
 
-    // --- AI players area -----------------------------
+    // -----------------------------------------------------------------------
+    // AI player areas
+    // -----------------------------------------------------------------------
     private VBox buildAI1Area() {
         Label name = sectionLabel("AI 1");
         ai1ScoreLabel = scoreBadge("0");
@@ -187,21 +246,16 @@ public class Main extends Application
         ai1CardsBox.setTranslateY(-20);
 
         ai1BankrollLabel = infoPill("Bankroll", "$100");
-        ai1BetLabel = infoPill("Bet", "$0");
+        ai1BetLabel      = infoPill("Bet", "$0");
 
         VBox infoBox = new VBox(8, ai1BankrollLabel, ai1BetLabel);
         infoBox.setAlignment(Pos.CENTER);
 
         VBox box = new VBox(4, header, ai1CardsBox, infoBox);
         box.setAlignment(Pos.CENTER);
-
-        // scale everything down
         box.setScaleX(0.8);
         box.setScaleY(0.8);
-
-        // move up or down
         box.setTranslateY(-60);
-
         return box;
     }
 
@@ -218,45 +272,37 @@ public class Main extends Application
         ai2CardsBox.setRotate(-12);
         ai2CardsBox.setTranslateY(-20);
 
-
         ai2BankrollLabel = infoPill("Bankroll", "$100");
-        ai2BetLabel = infoPill("Bet", "$0");
+        ai2BetLabel      = infoPill("Bet", "$0");
 
         VBox infoBox = new VBox(8, ai2BankrollLabel, ai2BetLabel);
         infoBox.setAlignment(Pos.CENTER);
 
         VBox box = new VBox(4, header, ai2CardsBox, infoBox);
         box.setAlignment(Pos.CENTER);
-
-        // scale everything down
         box.setScaleX(0.8);
         box.setScaleY(0.8);
-
-         // move up or down
         box.setTranslateY(-60);
-
         return box;
     }
 
-    // --- Player zone + controls (bottom) -----------------------------------
+    // -----------------------------------------------------------------------
+    // Player zone + controls
+    // -----------------------------------------------------------------------
     private VBox buildPlayerAndControls() 
     {
         playerCardsBox = new HBox(-30);
-        // playerCardsBox = new HBox(-30,
-        //     CardView.faceUp("A", "\u2660"),
-        //     CardView.faceUp("9", "\u2666")
-        // );
         playerCardsBox.setAlignment(Pos.CENTER);
 
         Label name = sectionLabel("YOU");
         playerScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(16, name, playerScoreLabel);
+        HBox header   = new HBox(16, name, playerScoreLabel);
         header.setAlignment(Pos.CENTER);
 
-        HBox infoRow = buildInfoRow();
+        HBox infoRow   = buildInfoRow();
         HBox buttonRow = buildButtonRow();
-        HBox raiseRow = buildRaiseRow();
+        HBox raiseRow  = buildRaiseRow();
 
         VBox box = new VBox(12, playerCardsBox, header, infoRow, buttonRow, raiseRow);
         box.setAlignment(Pos.CENTER);
@@ -280,42 +326,67 @@ public class Main extends Application
 
     private HBox buildButtonRow() 
     {
-        deal   = actionButton("Deal",   "#2a9d8f");
-        hit    = actionButton("Hit",    "#457b9d");
-        stand  = actionButton("Stand",  "#e76f51");
-        reset  = actionButton("Reset",  "#6c757d");
+        deal  = actionButton("Deal",  "#2a9d8f");
+        hit   = actionButton("Hit",   "#457b9d");
+        stand = actionButton("Stand", "#e76f51");
+        reset = actionButton("Reset", "#6c757d");
 
-        // Non-functional for now; just shows buttons register clicks.
-        deal.setOnAction(e  -> {
-            
+        deal.setOnAction(e -> {
             System.out.println("Deal clicked");
-            game.startRound(game.getHuman().getAccount().getCurrentBet());
-            updateUI();
+            if (game.startRound(game.getHuman().getAccount().getCurrentBet())) {
+                // Clear card boxes — game logic already populated hands
+                dealerCardsBox.getChildren().clear();
+                playerCardsBox.getChildren().clear();
+                ai1CardsBox.getChildren().clear();
+                ai2CardsBox.getChildren().clear();
 
+                // Build animation list mirroring real blackjack deal order
+                List<CardInfo> cards = new ArrayList<>();
+                cards.add(new CardInfo(game.getHuman().getHand().get(0),  playerCardsBox,  false));
+                cards.add(new CardInfo(game.getAi1().getHand().get(0),    ai1CardsBox,     false));
+                cards.add(new CardInfo(game.getAi2().getHand().get(0),    ai2CardsBox,     false));
+                cards.add(new CardInfo(game.getDealer().getHand().get(0), dealerCardsBox,  false));
+                cards.add(new CardInfo(game.getHuman().getHand().get(1),  playerCardsBox,  false));
+                cards.add(new CardInfo(game.getAi1().getHand().get(1),    ai1CardsBox,     false));
+                cards.add(new CardInfo(game.getAi2().getHand().get(1),    ai2CardsBox,     false));
+                // Dealer card[1] is the hole card — stays face-down
+                cards.add(new CardInfo(game.getDealer().getHand().get(1), dealerCardsBox,  true));
+
+                setButtonsDisabled(true);
+                animateDeal(cards, () -> updateUI());
+            } else {
+                updateUI(); // shows error message (e.g. no bet placed)
+            }
         });
 
-        hit.setOnAction(e  -> {
-            
+        hit.setOnAction(e -> {
             System.out.println("Hit clicked");
+            int prevSize = game.getHuman().getHand().size();
             game.humanHit();
-            updateUI();
 
+            if (game.getHuman().getHand().size() > prevSize) {
+                Card newCard = game.getHuman().getHand().get(game.getHuman().getHand().size() - 1);
+                List<CardInfo> cards = new ArrayList<>();
+                cards.add(new CardInfo(newCard, playerCardsBox, false));
+                setButtonsDisabled(true);
+                animateDeal(cards, () -> updateUI());
+            } else {
+                updateUI();
+            }
         });
-        stand.setOnAction(e  -> {
-            
+
+        stand.setOnAction(e -> {
             System.out.println("Stand clicked");
             game.humanStand();
             updateUI();
-
         });
-        reset.setOnAction(e  -> {
-            
+
+        reset.setOnAction(e -> {
             System.out.println("Reset clicked");
             game = new BlackjackGame();
             hasPlacedInitialBet = false;
             raiseBetBtn.setText("Initial Bet");
             updateUI();
-
         });
 
         HBox row = new HBox(12, deal, hit, stand, reset);
@@ -352,7 +423,112 @@ public class Main extends Application
         return row;
     }
 
-    // --- update ui ------------------------------
+    // -----------------------------------------------------------------------
+    // Animation — deal one card at a time, chained sequentially
+    // -----------------------------------------------------------------------
+
+    /**
+     * Animates cards one-by-one from the deck pile to each target HBox.
+     * Each card slides face-down, then flips to reveal its face on arrival.
+     * Calls onDone when the last card finishes.
+     */
+    private void animateDeal(List<CardInfo> cards, Runnable onDone) {
+        if (cards.isEmpty()) {
+            if (onDone != null) onDone.run();
+            return;
+        }
+        animateOneCard(cards.get(0), () ->
+            animateDeal(cards.subList(1, cards.size()), onDone)
+        );
+    }
+
+    private void animateOneCard(CardInfo info, Runnable onComplete) {
+        // --- Origin: center of the deck pile in overlay-local coords ---
+        Bounds deckScene     = deckNode.localToScene(deckNode.getBoundsInLocal());
+        Bounds deckInOverlay = overlayPane.sceneToLocal(deckScene);
+
+        double startX = deckInOverlay.getMinX() + (deckInOverlay.getWidth()  - CardView.WIDTH)  / 2;
+        double startY = deckInOverlay.getMinY() + (deckInOverlay.getHeight() - CardView.HEIGHT) / 2;
+
+        // Face-down card placed on overlay at deck position
+        CardView animCard = CardView.faceDown();
+        animCard.setLayoutX(startX);
+        animCard.setLayoutY(startY);
+        overlayPane.getChildren().add(animCard);
+
+        // Destination: center of target HBox in overlay-local coords
+        Bounds targetScene     = info.targetBox.localToScene(info.targetBox.getBoundsInLocal());
+        Bounds targetInOverlay = overlayPane.sceneToLocal(targetScene);
+
+        double endX = targetInOverlay.getMinX() + (targetInOverlay.getWidth()  - CardView.WIDTH)  / 2;
+        double endY = targetInOverlay.getMinY() + (targetInOverlay.getHeight() - CardView.HEIGHT) / 2;
+
+        // Phase 1: slide face-down card from deck to target hand
+        TranslateTransition slide = new TranslateTransition(Duration.millis(450), animCard);
+        slide.setToX(endX - startX);
+        slide.setToY(endY - startY);
+
+        slide.setOnFinished(slideEvt -> {
+            // Phase 2a: rotate 0° → 90° (card "edge-on", disappears)
+            RotateTransition rotateOut = new RotateTransition(Duration.millis(110), animCard);
+            rotateOut.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0)); // Y-axis flip
+            rotateOut.setFromAngle(0);
+            rotateOut.setToAngle(90);
+
+            rotateOut.setOnFinished(rotOutEvt -> {
+                // Swap content: remove face-down, add revealed card
+                overlayPane.getChildren().remove(animCard);
+
+                CardView revealCard = info.faceDown
+                    ? CardView.faceDown()
+                    : CardView.faceUp(info.card.getRank(), suitToSymbol(info.card.getSuit()));
+
+                revealCard.setLayoutX(startX);
+                revealCard.setLayoutY(startY);
+                revealCard.setTranslateX(endX - startX);
+                revealCard.setTranslateY(endY - startY);
+                // Start the flip-in from -90° (edge-on) so it opens toward the viewer
+                revealCard.setRotationAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+                revealCard.setRotate(-90);
+                overlayPane.getChildren().add(revealCard);
+
+                // Phase 2b: rotate -90° → 0° (card opens to face)
+                RotateTransition rotateIn = new RotateTransition(Duration.millis(110), revealCard);
+                rotateIn.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+                rotateIn.setFromAngle(-90);
+                rotateIn.setToAngle(0);
+
+                rotateIn.setOnFinished(rotInEvt -> {
+                    overlayPane.getChildren().remove(revealCard);
+                    // Place permanent card in the target HBox
+                    CardView staticCard = info.faceDown
+                        ? CardView.faceDown()
+                        : CardView.faceUp(info.card.getRank(), suitToSymbol(info.card.getSuit()));
+                    info.targetBox.getChildren().add(staticCard);
+
+                    if (onComplete != null) onComplete.run();
+                });
+                rotateIn.play();
+            });
+            rotateOut.play();
+        });
+
+        slide.play();
+    }
+
+    // Disable/enable all interactive controls during animation.
+    private void setButtonsDisabled(boolean disabled) {
+        deal.setDisable(disabled);
+        hit.setDisable(disabled);
+        stand.setDisable(disabled);
+        reset.setDisable(disabled);
+        raiseBetBtn.setDisable(disabled);
+        raiseSpinner.setDisable(disabled);
+    }
+
+    // -----------------------------------------------------------------------
+    // UI update
+    // -----------------------------------------------------------------------
     private void updateUI() {
         messageLabel.setText(game.getStatusMessage());
 
@@ -366,7 +542,6 @@ public class Main extends Application
         ai1ScoreLabel.setText(String.valueOf(game.getAi1().getHandValue()));
         ai2ScoreLabel.setText(String.valueOf(game.getAi2().getHandValue()));
 
-        // formatmoney makes it where it adds , 1000=>1,000
         bankrollLabel.setText("Bankroll $" + formatMoney(game.getHuman().getAccount().getTotal()));
         betLabel.setText("Current Bet $" + formatMoney(game.getHuman().getAccount().getCurrentBet()));
 
@@ -381,11 +556,10 @@ public class Main extends Application
         updateAI1Cards();
         updateAI2Cards();
 
-        // checks if human turn
         boolean humanTurn = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
         int bankFloor = (int) Math.floor(game.getHuman().getAccount().getTotal());
-        boolean canPlaceInitialBet = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
-        boolean canRaiseDuringTurn = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
+        boolean canPlaceInitialBet  = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
+        boolean canRaiseDuringTurn  = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
         boolean canRaise = canPlaceInitialBet || canRaiseDuringTurn;
 
         if (canRaise) {
@@ -393,9 +567,7 @@ public class Main extends Application
                 (SpinnerValueFactory.IntegerSpinnerValueFactory) raiseSpinner.getValueFactory();
             fac.setMax(bankFloor);
             fac.setMin(1);
-            if (fac.getValue() > bankFloor) {
-                fac.setValue(bankFloor);
-            }
+            if (fac.getValue() > bankFloor) fac.setValue(bankFloor);
             raiseSpinner.setDisable(false);
             raiseBetBtn.setDisable(false);
         } else {
@@ -403,23 +575,19 @@ public class Main extends Application
             raiseBetBtn.setDisable(true);
         }
 
-        // turn off button if not human turn
         hit.setDisable(!humanTurn);
         stand.setDisable(!humanTurn);
         deal.setDisable(game.isRoundActive());
-
     }
 
-    //--- update cards of players ---------------------
-    private void updateDealerCards(){
-        // clears evreything in dealercardbox area
+    // -----------------------------------------------------------------------
+    // Card box renderers
+    // -----------------------------------------------------------------------
+    private void updateDealerCards() {
         dealerCardsBox.getChildren().clear();
-
         for (int i = 0; i < game.getDealer().getHand().size(); i++) {
             Card card = game.getDealer().getHand().get(i);
-
             if (i == 1 && !game.getDealer().isHoleCardRevealed()) {
-                // show unshown card
                 dealerCardsBox.getChildren().add(CardView.faceDown());
             } else {
                 dealerCardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
@@ -427,64 +595,45 @@ public class Main extends Application
         }
     }
 
-    private void updateHumanCards(){
-        // clears evreything in card area
+    private void updateHumanCards() {
         playerCardsBox.getChildren().clear();
-
-        for (int i = 0; i < game.getHuman().getHand().size(); i++) {
-            Card card = game.getHuman().getHand().get(i);
-
+        for (Card card : game.getHuman().getHand()) {
             playerCardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
     }
 
-    private void updateAI1Cards(){
-
+    private void updateAI1Cards() {
         ai1CardsBox.getChildren().clear();
-
-        for (int i = 0; i < game.getAi1().getHand().size(); i++) {
-            Card card = game.getAi1().getHand().get(i);
-
+        for (Card card : game.getAi1().getHand()) {
             ai1CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
     }
-    private void updateAI2Cards(){
-        
+
+    private void updateAI2Cards() {
         ai2CardsBox.getChildren().clear();
-
-        for (int i = 0; i < game.getAi2().getHand().size(); i++) {
-            Card card = game.getAi2().getHand().get(i);
-
+        for (Card card : game.getAi2().getHand()) {
             ai2CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
     }
 
-    // --- convert suit to cool shapes :D (hearts,diamoand,club,spade) -----
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
     private String suitToSymbol(String suit) {
-        if (suit.equals("Hearts")) {
-            return "\u2665";
-        } else if (suit.equals("Diamond")){
-            return "\u2666";
-        } else if (suit.equals("Club")) {
-            return "\u2663";
-        } else if (suit.equals("Spade")) {
-            return "\u2660";
-        } else {
-            return "?";
+        switch (suit) {
+            case "Hearts":  return "\u2665";
+            case "Diamond": return "\u2666";
+            case "Club":    return "\u2663";
+            case "Spade":   return "\u2660";
+            default:        return "?";
         }
     }
 
-    // --- makes money readable like 1000 => 1,000
     private String formatMoney(double amount) {
-        if (amount == (int) amount) {
-            // whole number
-            return Integer.toString((int) amount);
-        }
-        // decimals
+        if (amount == (int) amount) return Integer.toString((int) amount);
         return String.format("%.2f", amount);
     }
 
-    // --- Small UI helpers --------------------------------------------------
     private Label sectionLabel(String text) 
     {
         Label l = new Label(text);
@@ -544,7 +693,6 @@ public class Main extends Application
         return b;
     }
 
-    // Dark-green radial felt.
     private RadialGradient tableFelt() 
     {
         return new RadialGradient(
