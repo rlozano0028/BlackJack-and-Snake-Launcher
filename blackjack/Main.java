@@ -138,9 +138,21 @@ public class Main extends Application
     // -----------------------------------------------------------------------
     MediaPlayer mediaPlayer;
     public void music() {
-        String s = "../sound/Balatro-Main-Theme.mp3";
-        Media h = new Media(Paths.get(s).toUri().toString());
-        mediaPlayer = new MediaPlayer(h);
+        String[] candidates = {
+            "sound/Balatro-Main-Theme.mp3",          // running from project root
+            "../sound/Balatro-Main-Theme.mp3",        // running from blackjack/ folder
+            "JavaFxGames/sound/Balatro-Main-Theme.mp3" // running from project root (JavaFxGames layout)
+        };
+        for (String s : candidates) {
+            java.io.File f = new java.io.File(s);
+            if (f.exists()) {
+                Media h = new Media(f.toURI().toString());
+                mediaPlayer = new MediaPlayer(h);
+                mediaPlayer.play();
+                return;
+            }
+        }
+        System.out.println("Music not found/loaded.");
     }
 
     // -----------------------------------------------------------------------
