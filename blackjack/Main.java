@@ -65,12 +65,14 @@ public class Main extends Application
     private Button raiseBetBtn;
 
     private int raiseAmt;
+    private boolean hasPlacedInitialBet;
 
 
     @Override
     public void start(Stage stage) 
     {
         game = new BlackjackGame();
+        hasPlacedInitialBet = false;
         
         BorderPane root = new BorderPane();
         root.setBackground(new Background(new BackgroundFill(tableFelt(), CornerRadii.EMPTY, Insets.EMPTY)));
@@ -85,14 +87,16 @@ public class Main extends Application
         stage.setScene(scene);
         stage.setMinWidth(980);
         stage.setMinHeight(700);
-        stage.show();
-        updateUI();
 
         try {
             music();
+            stage.setOnShown(e -> mediaPlayer.play());
         } catch (Exception e) {
             System.out.println("Music not found/loaded.");
         }
+
+        stage.show();
+        updateUI();
     }
     
     // music player
@@ -101,7 +105,6 @@ public class Main extends Application
         String s = "../sound/Balatro-Main-Theme.mp3";
         Media h = new Media(Paths.get(s).toUri().toString());
         mediaPlayer = new MediaPlayer(h);
-        mediaPlayer.play();
     }
 
     // --- Dealer zone (top) -------------------------------------------------
@@ -286,7 +289,7 @@ public class Main extends Application
         deal.setOnAction(e  -> {
             
             System.out.println("Deal clicked");
-            game.startRound(raiseAmt);
+            game.startRound(game.getHuman().getAccount().getCurrentBet());
             updateUI();
 
         });
@@ -309,6 +312,8 @@ public class Main extends Application
             
             System.out.println("Reset clicked");
             game = new BlackjackGame();
+            hasPlacedInitialBet = false;
+            raiseBetBtn.setText("Initial Bet");
             updateUI();
 
         });
@@ -329,11 +334,15 @@ public class Main extends Application
         raiseSpinner.setEditable(true);
         raiseSpinner.setPrefWidth(100);
 
-        raiseBetBtn = actionButton("Raise bet", "#8e44ad");
+        raiseBetBtn = actionButton("Initial Bet", "#8e44ad");
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
             raiseAmt = raiseSpinner.getValue();
             game.humanRaiseBet(raiseAmt);
+            if (!hasPlacedInitialBet) {
+                hasPlacedInitialBet = true;
+                raiseBetBtn.setText("Raise");
+            }
             updateUI();
         });
 
@@ -375,7 +384,9 @@ public class Main extends Application
         // checks if human turn
         boolean humanTurn = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
         int bankFloor = (int) Math.floor(game.getHuman().getAccount().getTotal());
-        boolean canRaise = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
+        boolean canPlaceInitialBet = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
+        boolean canRaiseDuringTurn = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
+        boolean canRaise = canPlaceInitialBet || canRaiseDuringTurn;
 
         if (canRaise) {
             SpinnerValueFactory.IntegerSpinnerValueFactory fac =

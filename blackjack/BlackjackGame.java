@@ -3,6 +3,8 @@ import java.util.List;
 import java.util.Random;
 
 public class BlackjackGame {
+    private static final double DEFAULT_BET = 10.0;
+
     public enum Turn {
         HUMAN, AI1, AI2, DEALER, ROUND_OVER
     }
@@ -58,8 +60,11 @@ public class BlackjackGame {
     }
 
     public boolean startRound(double humanBet) {
-        if (humanBet <= 0) {
-            statusMessage = "Bet cannot be less than or equals to 0.";
+        double existingBet = human.getAccount().getCurrentBet();
+        boolean hasPreplacedBet = existingBet > 0;
+
+        if (!hasPreplacedBet && humanBet <= 0) {
+            statusMessage = "Place your bet before dealing.";
             return false;
         }
 
@@ -73,10 +78,13 @@ public class BlackjackGame {
         ai2.clearHand();
         dealer.clearHand();
 
-        // put bets
-        if (!human.placeBet(humanBet)) {
-            statusMessage = "You don't have enough money.";
-            return false;
+        // Put bets. If the player already placed an initial bet pre-round,
+        // keep that wager and do not charge bankroll again.
+        if (!hasPreplacedBet) {
+            if (!human.placeBet(humanBet)) {
+                statusMessage = "You don't have enough money.";
+                return false;
+            }
         }
 
         placeAIBets();
@@ -159,7 +167,15 @@ public class BlackjackGame {
      * @return true if the raise was applied
      */
     public boolean humanRaiseBet(double additional) {
-        if (!roundActive || currentTurn != Turn.HUMAN) {
+        if (!roundActive) {
+            if (!human.placeBet(additional)) {
+                statusMessage = "Not enough bankroll for that bet.";
+                return false;
+            }
+            statusMessage = "Initial bet placed.";
+            return true;
+        }
+        if (currentTurn != Turn.HUMAN) {
             statusMessage = "You can't raise your bet right now.";
             return false;
         }
@@ -283,6 +299,18 @@ public class BlackjackGame {
         currentTurn = Turn.ROUND_OVER;
         roundActive = false;
         statusMessage = "Round over.";
+        queueDefaultHumanBet();
+    }
+
+    private void queueDefaultHumanBet() {
+        if (human.getAccount().getCurrentBet() > 0) {
+            return;
+        }
+        double bankroll = human.getAccount().getTotal();
+        double nextBet = Math.min(DEFAULT_BET, bankroll);
+        if (nextBet > 0) {
+            human.placeBet(nextBet);
+        }
     }
 
     private void settlePlayer(Player player) {
