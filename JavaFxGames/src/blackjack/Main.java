@@ -1,3 +1,5 @@
+package blackjack;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -70,8 +72,30 @@ public class Main extends Application
     @Override
     public void start(Stage stage) 
     {
+        BorderPane root = buildView();
+
+        Scene scene = new Scene(root, 1180, 760);
+        stage.setTitle("Blackjack");
+        stage.setScene(scene);
+        stage.setMinWidth(980);
+        stage.setMinHeight(700);
+        stage.show();
+
+        try {
+            music();
+        } catch (Exception e) {
+            System.out.println("Music not found/loaded.");
+        }
+    }
+
+    /**
+     * Builds and returns the full Blackjack UI as a BorderPane that can be
+     * embedded inside another layout (e.g. the GameManager) without needing
+     * a dedicated Stage.
+     */
+    public BorderPane buildView() {
         game = new BlackjackGame();
-        
+
         BorderPane root = new BorderPane();
         root.setBackground(new Background(new BackgroundFill(tableFelt(), CornerRadii.EMPTY, Insets.EMPTY)));
         root.setPadding(new Insets(24));
@@ -80,19 +104,16 @@ public class Main extends Application
         root.setCenter(buildCenterArea());
         root.setBottom(buildBottomArea());
 
-        Scene scene = new Scene(root, 1180, 760);
-        stage.setTitle("Blackjack");
-        stage.setScene(scene);
-        stage.setMinWidth(980);
-        stage.setMinHeight(700);
-        stage.show();
         updateUI();
+        return root;
+    }
 
-        try {
-            music();
-        } catch (Exception e) {
-            System.out.println("Music not found/loaded.");
-        }
+    /**
+     * Returns the human player's current bankroll as an integer — used by
+     * the GameManager to record the high score when the player leaves.
+     */
+    public int getCurrentScore() {
+        return (int) game.getHuman().getAccount().getTotal();
     }
     
     // music player

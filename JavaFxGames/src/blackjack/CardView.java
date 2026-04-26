@@ -1,3 +1,5 @@
+package blackjack;
+
 import javafx.geometry.Pos;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;

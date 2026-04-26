@@ -1,232 +1,251 @@
 package gameManager;
 
 import javafx.application.Application;
-import javafx.stage.Stage;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
-import javafx.scene.control.PasswordField;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ToolBar;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.control.ToolBar;
-import javafx.geometry.Insets;
-import java.util.ArrayList;
-import java.util.Comparator;
+
+import java.util.List;
+
+import javafx.stage.Stage;
+import blackjack.Main;
+import snake.GamePane;
 
 public class GameManager extends Application {
-    private Stage stage;
+
+    // -----------------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------------
     private BorderPane root;
-    private ArrayList<ScoreEntry> blackjackHighScores = new ArrayList<>();
-    private ArrayList<ScoreEntry> snakeHighScores = new ArrayList<>();
 
-    private String currentUser = null;
+    private final AccountService accountService = new AccountService();
+    private final ScoreService   scoreService   = new ScoreService();
 
+    private String   currentUser          = null;
+    private GamePane currentSnakePane     = null;
+    private Main     currentBlackjackMain = null;
+
+    // -----------------------------------------------------------------------
+    // JavaFX entry point
+    // -----------------------------------------------------------------------
     @Override
-    public void start(Stage primaryStage){
+    public void start(Stage primaryStage) {
         this.root = new BorderPane();
-        this.stage = primaryStage;
 
-        loadTempScores();
         startScreen();
 
         Scene scene = new Scene(root, 1000, 900);
-        stage.setTitle("Game Manager");
-        stage.setScene(scene);
-        stage.show();
+        primaryStage.setTitle("Game Manager");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
+
+    // -----------------------------------------------------------------------
+    // Pre-login screens  (no toolbar)
+    // -----------------------------------------------------------------------
 
     private void startScreen() {
-        Label title = new Label("Game Manager");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 18));
-
-        Label subtitle = new Label("Click a button");
-        subtitle.setFont(Font.font("Arial", 12));
-
-        Button loginButton = new Button("Log In");
-        Button createAccountButton = new Button("Create account");
-
-        loginButton.setPrefWidth(180);
-        createAccountButton.setPrefWidth(180);
-
-        loginButton.setOnAction(e -> loginScreen());
-        createAccountButton.setOnAction(e -> createAccountScreen());
-
-        VBox centerBox = new VBox(20, title, subtitle, loginButton, createAccountButton);
-        centerBox.setAlignment(Pos.CENTER);
-
         root.setTop(null);
-        root.setCenter(centerBox);
+
+        Label title    = new Label("Game Manager");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 28));
+
+        Label subtitle = new Label("Please log in or create an account.");
+        subtitle.setFont(Font.font("Arial", 14));
+
+        Button loginBtn  = new Button("Log In");
+        Button createBtn = new Button("Create Account");
+        loginBtn.setPrefWidth(200);
+        createBtn.setPrefWidth(200);
+
+        loginBtn.setOnAction(e -> loginScreen());
+        createBtn.setOnAction(e -> createAccountScreen());
+
+        VBox box = new VBox(20, title, subtitle, loginBtn, createBtn);
+        box.setAlignment(Pos.CENTER);
+        root.setCenter(box);
     }
 
-    // log in
     private void loginScreen() {
+        root.setTop(null);
+
         Label title = new Label("Log In");
         title.setFont(Font.font("Arial", FontWeight.BOLD, 26));
 
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Username");
-        usernameField.setMaxWidth(250);
-
+        TextField     usernameField = new TextField();
         PasswordField passwordField = new PasswordField();
+        usernameField.setPromptText("Username");
         passwordField.setPromptText("Password");
+        usernameField.setMaxWidth(250);
         passwordField.setMaxWidth(250);
 
-        Label infoLabel = new Label("temp ui log");
+        Label errorLabel = new Label("");
+        errorLabel.setStyle("-fx-text-fill: red;");
 
-        Button loginButton = new Button("Log IN");
-        Button backButton = new Button("Back");
+        Button loginBtn = new Button("Log In");
+        Button backBtn  = new Button("Back");
+        loginBtn.setPrefWidth(180);
+        backBtn.setPrefWidth(180);
 
-        loginButton.setPrefWidth(180);
-        backButton.setPrefWidth(180);
+        loginBtn.setOnAction(e -> {
+            String user = usernameField.getText().trim();
+            String pass = passwordField.getText();
 
-        loginButton.setOnAction( e -> {
-            if (usernameField.getText().isBlank() || passwordField.getText().isBlank()) {
-                infoLabel.setText("Enter username and password.");
-            } else {
-                currentUser = usernameField.getText();
-                mainMenu();
+            if (user.isBlank() || pass.isBlank()) {
+                errorLabel.setText("Please enter both username and password.");
+                return;
             }
+            if (accountService.fileIsMissing()) {
+                errorLabel.setText("No accounts exist. Please create one.");
+                return;
+            }
+            if (!accountService.validateLogin(user, pass)) {
+                errorLabel.setText("Invalid username or password.");
+                return;
+            }
+            currentUser = user;
+            mainMenu();
         });
 
-        backButton.setOnAction(e -> startScreen());
+        backBtn.setOnAction(e -> startScreen());
 
-        HBox buttonRow = new HBox(10, loginButton, backButton);
+        HBox buttonRow = new HBox(10, loginBtn, backBtn);
         buttonRow.setAlignment(Pos.CENTER);
 
-        VBox box = new VBox(15, title, usernameField, passwordField, buttonRow, infoLabel);
+        VBox box = new VBox(15, title, usernameField, passwordField, buttonRow, errorLabel);
         box.setAlignment(Pos.CENTER);
-
-        root.setTop(null);
         root.setCenter(box);
     }
 
-    // create account
     private void createAccountScreen() {
-        Label title = new Label("Create ACcount");
+        root.setTop(null);
+
+        Label title = new Label("Create Account");
         title.setFont(Font.font("Arial", FontWeight.BOLD, 26));
 
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Username");
-        usernameField.setMaxWidth(200);
-
+        TextField     usernameField = new TextField();
         PasswordField passwordField = new PasswordField();
+        usernameField.setPromptText("Username");
         passwordField.setPromptText("Password");
-        passwordField.setMaxWidth(200);
+        usernameField.setMaxWidth(250);
+        passwordField.setMaxWidth(250);
 
-        Button createButton = new Button("Create");
-        Button backButton = new Button("Back");
+        Label errorLabel = new Label("");
+        errorLabel.setStyle("-fx-text-fill: red;");
 
-        createButton.setPrefWidth(120);
-        backButton.setPrefWidth(120);
+        Button createBtn = new Button("Create");
+        Button backBtn   = new Button("Back");
+        createBtn.setPrefWidth(180);
+        backBtn.setPrefWidth(180);
 
-        // temp log in screen
-        createButton.setOnAction(e -> loginScreen());
-        backButton.setOnAction(e -> startScreen());
+        createBtn.setOnAction(e -> {
+            String user = usernameField.getText().trim();
+            String pass = passwordField.getText();
 
-        HBox buttonRow = new HBox(10, createButton, backButton);
+            if (user.isBlank() || pass.isBlank()) {
+                errorLabel.setText("Please enter both username and password.");
+                return;
+            }
+            if (user.contains(":") || pass.contains(":")) {
+                errorLabel.setText("Username/password may not contain ':'.");
+                return;
+            }
+            boolean created = accountService.createAccount(user, pass);
+            if (!created) {
+                errorLabel.setText("Username already taken.");
+                return;
+            }
+            scoreService.ensureDefaultScore(user);
+            loginScreen();
+        });
+
+        backBtn.setOnAction(e -> startScreen());
+
+        HBox buttonRow = new HBox(10, createBtn, backBtn);
         buttonRow.setAlignment(Pos.CENTER);
 
-        VBox box = new VBox(15, title, usernameField, passwordField, buttonRow);
+        VBox box = new VBox(15, title, usernameField, passwordField, buttonRow, errorLabel);
         box.setAlignment(Pos.CENTER);
-
-        root.setTop(null);
         root.setCenter(box);
     }
 
-    // shared toolbar
-    private ToolBar buildToolBar() {
-        Button mainMenuButton = new Button("Main Menu");
-        Button logoutButton = new Button("Log Out");
+    // -----------------------------------------------------------------------
+    // Post-login navigation
+    // -----------------------------------------------------------------------
 
-        Label userLabel = new Label("User: " + currentUser);
-
-        mainMenuButton.setOnAction(e -> mainMenu());
-        logoutButton.setOnAction(e -> {
-            currentUser = null;
-            startScreen();
-        });
-
-        return new ToolBar(mainMenuButton, logoutButton, userLabel);
-        
-    }
-
-    private void loadTempScores() {
-        blackjackHighScores.clear();
-        snakeHighScores.clear();
-
-        blackjackHighScores.add(new ScoreEntry("Jane", 1000));
-        snakeHighScores.add(new ScoreEntry("John", 1000));
-    }
-
-    private VBox buildScoreList(ArrayList<ScoreEntry> scores) {
-        VBox scoreBox = new VBox(5);
-
-        for (int i = 0; i < 5; i++) {
-            if (i < scores.size()) {
-                ScoreEntry entry = scores.get(i);
-                scoreBox.getChildren().add(new Label((i + 1) + ". " + entry.getUsername() + " - " + entry.getScore()));
-            } else {
-                scoreBox.getChildren().add(new Label((i + 1) + ". ----"));
-            }
-        } 
-        return scoreBox;
+    /**
+     * Saves any active game score, clears the game references, then shows the
+     * main menu. This is the single correct way to navigate back to main menu.
+     */
+    private void goToMainMenu() {
+        if (currentSnakePane != null) {
+            int score = currentSnakePane.getScore();
+            scoreService.updateScore("SNAKE", currentUser, score);
+            currentSnakePane = null;
+        }
+        if (currentBlackjackMain != null) {
+            int score = currentBlackjackMain.getCurrentScore();
+            scoreService.updateScore("BLACKJACK", currentUser, score);
+            currentBlackjackMain = null;
+        }
+        mainMenu();
     }
 
     private void mainMenu() {
         root.setTop(buildToolBar());
 
-        for (int i = 0; i < blackjackHighScores.size(); i++) {
-            for (int j = i + 1; j < blackjackHighScores.size(); j++) {
-                if (blackjackHighScores.get(j).getScore() > blackjackHighScores.get(i).getScore()) {
-                    // swap so reverse order
-                    ScoreEntry temp = blackjackHighScores.get(i);
-                    blackjackHighScores.set(i, blackjackHighScores.get(j));
-                    blackjackHighScores.set(j, temp);
-                }
-            }
-        }
-        for (int i = 0; i < snakeHighScores.size(); i++) {
-            for (int j = i + 1; j < snakeHighScores.size(); j++) {
-                if (snakeHighScores.get(j).getScore() > snakeHighScores.get(i).getScore()) {
-                    // swap so reverse order
-                    ScoreEntry temp = snakeHighScores.get(i);
-                    snakeHighScores.set(i, snakeHighScores.get(j));
-                    snakeHighScores.set(j, temp);
-                }
-            }
-        }
+        // --- Scores pane (left) ---
+        List<ScoreEntry> bjScores    = scoreService.getTopScores("BLACKJACK", 5);
+        List<ScoreEntry> snakeScores = scoreService.getTopScores("SNAKE", 5);
 
         Label scoreTitle = new Label("Top 5 High Scores");
         scoreTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
 
-        Label blackjackTitle = new Label("Blackjack");
-        blackjackTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-
-        VBox blackjackScores = buildScoreList(blackjackHighScores);
+        Label bjTitle = new Label("Blackjack");
+        bjTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
 
         Label snakeTitle = new Label("Snake");
         snakeTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
 
-        VBox snakeScores = buildScoreList(snakeHighScores);
-
-        VBox scoresPane = new VBox(15, scoreTitle, blackjackTitle, blackjackScores, snakeTitle, snakeScores);
+        VBox scoresPane = new VBox(
+                15, scoreTitle,
+                bjTitle,    buildScoreList(bjScores),
+                snakeTitle, buildScoreList(snakeScores)
+        );
         scoresPane.setPadding(new Insets(20));
         scoresPane.setPrefWidth(350);
 
-        Button blackjackButton = new Button("Open Blackjack");
-        Button snakeButton = new Button("Open Snake");
-        blackjackButton.setPrefWidth(200);
-        snakeButton.setPrefWidth(200);
+        // --- Launcher pane (right) ---
+        Label launchTitle = new Label("Play a Game");
+        launchTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
 
-        blackjackButton.setOnAction(e -> blackjackGame());
-        snakeButton.setOnAction(e -> snakeGame());
+        Button bjBtn    = new Button("Open Blackjack");
+        Button snakeBtn = new Button("Open Snake");
+        Button ph1      = new Button("Coming Soon");
+        Button ph2      = new Button("Coming Soon");
 
-        VBox launcherPane = new VBox(15, blackjackButton, snakeButton);
+        bjBtn.setPrefWidth(200);
+        snakeBtn.setPrefWidth(200);
+        ph1.setPrefWidth(200);
+        ph2.setPrefWidth(200);
+
+        ph1.setDisable(true);
+        ph2.setDisable(true);
+
+        bjBtn.setOnAction(e -> blackjackGame());
+        snakeBtn.setOnAction(e -> snakeGame());
+
+        VBox launcherPane = new VBox(15, launchTitle, bjBtn, snakeBtn, ph1, ph2);
         launcherPane.setAlignment(Pos.CENTER);
         launcherPane.setPadding(new Insets(20));
         launcherPane.setPrefWidth(350);
@@ -237,33 +256,75 @@ public class GameManager extends Application {
         root.setCenter(content);
     }
 
-    // games
+    private VBox buildScoreList(List<ScoreEntry> scores) {
+        VBox box = new VBox(5);
+        for (int i = 0; i < 5; i++) {
+            if (i < scores.size()) {
+                ScoreEntry e = scores.get(i);
+                box.getChildren().add(new Label((i + 1) + ". " + e.getUsername() + " - " + e.getScore()));
+            } else {
+                box.getChildren().add(new Label((i + 1) + ". ----"));
+            }
+        }
+        return box;
+    }
+
+    // -----------------------------------------------------------------------
+    // Persistent toolbar
+    // -----------------------------------------------------------------------
+
+    private ToolBar buildToolBar() {
+        Button mainMenuBtn = new Button("Main Menu");
+        Button logoutBtn   = new Button("Log Out");
+        Label  userLabel   = new Label("User: " + currentUser);
+
+        mainMenuBtn.setOnAction(e -> goToMainMenu());
+
+        logoutBtn.setOnAction(e -> {
+            // Save any open game score before logging out
+            if (currentSnakePane != null) {
+                scoreService.updateScore("SNAKE", currentUser, currentSnakePane.getScore());
+                currentSnakePane = null;
+            }
+            if (currentBlackjackMain != null) {
+                scoreService.updateScore("BLACKJACK", currentUser, currentBlackjackMain.getCurrentScore());
+                currentBlackjackMain = null;
+            }
+            currentUser = null;
+            startScreen();
+        });
+
+        return new ToolBar(mainMenuBtn, logoutBtn, userLabel);
+    }
+
+    // -----------------------------------------------------------------------
+    // Game views
+    // -----------------------------------------------------------------------
+
     private void snakeGame() {
         root.setTop(buildToolBar());
 
-        Label title = new Label("Snake Placeholder");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        currentSnakePane = new GamePane();
+        currentSnakePane.setOnExit(() -> goToMainMenu());
 
-        VBox box = new VBox(20, title);
-        box.setAlignment(Pos.CENTER);
-
-        root.setCenter(box);
+        root.setCenter(currentSnakePane);
+        currentSnakePane.requestFocus();
     }
 
     private void blackjackGame() {
         root.setTop(buildToolBar());
 
-        Label title = new Label("Blackjack Placeholder");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        currentBlackjackMain = new Main();
+        BorderPane bjView = currentBlackjackMain.buildView();
 
-        VBox box = new VBox(20, title);
-        box.setAlignment(Pos.CENTER);
-
-        root.setCenter(box);
+        root.setCenter(bjView);
     }
+
+    // -----------------------------------------------------------------------
+    // Application entry point
+    // -----------------------------------------------------------------------
 
     public static void main(String[] args) {
         launch(args);
     }
 }
-

@@ -42,6 +42,8 @@ public class GamePane extends Pane {
     private Button restartButton;
     private Button exitButton;
 
+    private Runnable onExit;
+
     // private static final String[] FRUIT_IMAGES = new String[]{
     // "JavaFxGames/src/images/ic_apple.png",
     // "JavaFxGames/src/images/ic_berry.png",
@@ -106,6 +108,16 @@ public class GamePane extends Pane {
         });
 
         createTimeline();
+    }
+
+    /** Registers a callback invoked when the player clicks "Exit" after game over. */
+    public void setOnExit(Runnable handler) {
+        this.onExit = handler;
+    }
+
+    /** Returns the current snake score (number of fruits eaten). */
+    public int getScore() {
+        return snake.getScore();
     }
 
     private void createTimeline() {
@@ -287,6 +299,9 @@ public class GamePane extends Pane {
         exitButton.setPrefWidth(80);
         exitButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
         exitButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 80);
+        exitButton.setOnAction(e -> {
+            if (onExit != null) onExit.run();
+        });
 
         restartButton.setOnAction(e -> {
             getChildren().removeAll(restartButton, exitButton);
