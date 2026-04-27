@@ -195,6 +195,7 @@ public class GameManager extends Application {
             currentSnakePane = null;
         }
         if (currentBlackjackMain != null) {
+            currentBlackjackMain.stopMusic();
             int score = currentBlackjackMain.getCurrentScore();
             scoreService.updateScore("BLACKJACK", currentUser, score);
             currentBlackjackMain = null;
@@ -288,6 +289,7 @@ public class GameManager extends Application {
                 currentSnakePane = null;
             }
             if (currentBlackjackMain != null) {
+                currentBlackjackMain.stopMusic();
                 scoreService.updateScore("BLACKJACK", currentUser, currentBlackjackMain.getCurrentScore());
                 currentBlackjackMain = null;
             }
@@ -317,6 +319,7 @@ public class GameManager extends Application {
 
         currentBlackjackMain = new Main();
         StackPane bjView = currentBlackjackMain.buildView();
+        currentBlackjackMain.music();
 
         root.setCenter(bjView);
     }

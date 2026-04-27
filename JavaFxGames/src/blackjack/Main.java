@@ -173,6 +173,13 @@ public class Main extends Application
         System.out.println("Music not found/loaded.");
     }
 
+    public void stopMusic() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer = null;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Dealer zone (top)
     // -----------------------------------------------------------------------
@@ -433,8 +440,8 @@ public class Main extends Application
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
             raiseAmt = raiseSpinner.getValue();
-            game.humanRaiseBet(raiseAmt);
-            if (!hasPlacedInitialBet) {
+            boolean raiseApplied = game.humanRaiseBet(raiseAmt);
+            if (raiseApplied && !hasPlacedInitialBet) {
                 hasPlacedInitialBet = true;
                 raiseBetBtn.setText("Raise");
             }
@@ -563,6 +570,17 @@ public class Main extends Application
         updateHumanCards();
         updateAI1Cards();
         updateAI2Cards();
+
+        // Reset bet flag between rounds so the player can bet again
+        if (game.getCurrentTurn() == BlackjackGame.Turn.ROUND_OVER && hasPlacedInitialBet) {
+            hasPlacedInitialBet = false;
+            raiseBetBtn.setText("Initial Bet");
+        }
+
+        if (!game.isRoundActive() && game.getHuman().getAccount().getCurrentBet() > 0) {
+            hasPlacedInitialBet = true;
+            raiseBetBtn.setText("Raise");
+        }
 
         boolean humanTurn          = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
         int     bankFloor          = (int) Math.floor(game.getHuman().getAccount().getTotal());
