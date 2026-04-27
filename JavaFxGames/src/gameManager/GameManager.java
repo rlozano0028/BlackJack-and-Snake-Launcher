@@ -1,6 +1,7 @@
 package gameManager;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -280,6 +281,11 @@ public class GameManager extends Application {
         Button logoutBtn   = new Button("Log Out");
         Label  userLabel   = new Label("User: " + currentUser);
 
+        // Prevent toolbar controls from taking keyboard focus so game panes
+        // keep arrow-key input (e.g., Snake left/right movement).
+        mainMenuBtn.setFocusTraversable(false);
+        logoutBtn.setFocusTraversable(false);
+
         mainMenuBtn.setOnAction(e -> goToMainMenu());
 
         logoutBtn.setOnAction(e -> {
@@ -311,7 +317,7 @@ public class GameManager extends Application {
         currentSnakePane.setOnExit(() -> goToMainMenu());
 
         root.setCenter(currentSnakePane);
-        currentSnakePane.requestFocus();
+        Platform.runLater(() -> currentSnakePane.requestFocus());
     }
 
     private void blackjackGame() {
