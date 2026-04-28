@@ -4,8 +4,8 @@ import java.util.Objects;
 
 public class Position {
     
-    private int xPosition;
-    private int yPosition;
+    private final int xPosition;
+    private final int yPosition;
 
     public Position(int xPosition, int yPosition){
         this.xPosition = xPosition;
@@ -18,14 +18,6 @@ public class Position {
 
     public int getY(){
         return this.yPosition;
-    }
-
-    public void setX(int xPosition){
-        this.xPosition = xPosition;
-    }
-    
-    public void setY(int yPosition){
-        this.yPosition = yPosition;
     }
 
     @Override
