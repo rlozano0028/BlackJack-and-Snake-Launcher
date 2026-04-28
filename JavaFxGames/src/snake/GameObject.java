@@ -1,11 +1,7 @@
 package snake;
 
 public abstract class GameObject {
-    private Position position;
-
-    public GameObject(Position position) {
-        this.position = position;
-    }
+    protected Position position;
 
     public Position getPosition() {
         return position;
@@ -14,4 +10,6 @@ public abstract class GameObject {
     public void setPosition(Position position) {
         this.position = position;
     }
+
+    public abstract void move();
 }

@@ -3,19 +3,7 @@ package snake;
 import java.util.Random;
 
 public enum Direction {
-    // UP,
-    // DOWN,
-    // LEFT,
-    // RIGHT
 
-    /*
-        Looking at a (+,-) plane
-
-        right = x + 1
-        left = x - 1
-        up = y - 1
-        down = y + 1
-    */
     RIGHT(1, 0),
     LEFT(-1, 0),
     UP(0, -1),

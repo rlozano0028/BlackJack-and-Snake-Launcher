@@ -2,7 +2,7 @@ package snake;
 
 import java.util.ArrayList;
 
-public class Snake implements Resettable {
+public class Snake extends GameObject implements Resettable {
 
     private ArrayList<Position> positions;
     private Position head;
@@ -36,7 +36,7 @@ public class Snake implements Resettable {
         return direction;
     }
 
-    //simplified move method
+    @Override
     public void move() {
         int newX = head.getX() + direction.getDx() * GameVariables.TILE_SIZE;
         int newY = head.getY() + direction.getDy() * GameVariables.TILE_SIZE;
@@ -50,15 +50,9 @@ public class Snake implements Resettable {
             length++;
             growNextMove = false;
         }
-
-        // if (checkCollision()) {
-        //     //reset game when collision
-        //     reset(); 
-        // }
     }
 
     public void grow() {
-        // length++;
         growNextMove = true;
     }
 
@@ -125,7 +119,6 @@ public class Snake implements Resettable {
     }
 
     public int getScore() {
-        //starting length is 3
         return length - 3;
     }
 }

@@ -6,13 +6,13 @@ public class SnakeGameLogic implements Resettable {
 
     private Snake snake;
     private Fruit fruit;
-    private FruitSpawner fruitSpawner;
+    // private FruitSpawner fruitSpawner;
     private double speed;
     private boolean paused;
     private boolean gameOver;
 
     public SnakeGameLogic() {
-        fruitSpawner = new FruitSpawner();
+        // fruitSpawner = new FruitSpawner();
         restart();
     }
 
@@ -40,7 +40,7 @@ public class SnakeGameLogic implements Resettable {
     }
 
     private void spawnNewFruit() {
-        fruit = fruitSpawner.spawnFruit(snake);
+        fruit.move();
     }
 
     private void increaseSpeed() {
@@ -54,6 +54,7 @@ public class SnakeGameLogic implements Resettable {
     @Override
     public void restart() {
         snake = new Snake();
+        fruit = new Fruit(snake);
         spawnNewFruit();
         speed = INITIAL_SPEED;
         paused = false;
