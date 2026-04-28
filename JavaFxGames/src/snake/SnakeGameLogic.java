@@ -10,9 +10,13 @@ public class SnakeGameLogic implements Resettable {
     private double speed;
     private boolean paused;
     private boolean gameOver;
+    private SoundPlayer music;
 
     public SnakeGameLogic() {
         // fruitSpawner = new FruitSpawner();
+        snake = new Snake();
+        fruit = new Fruit(snake);
+        music = new SoundPlayer();
         restart();
     }
 
@@ -34,6 +38,7 @@ public class SnakeGameLogic implements Resettable {
 
         if (snake.checkCollision()) {
             gameOver = true;
+            music.stop();
         }
 
         return ateFruit;
@@ -53,12 +58,13 @@ public class SnakeGameLogic implements Resettable {
 
     @Override
     public void restart() {
-        snake = new Snake();
-        fruit = new Fruit(snake);
+        snake.restart();
         spawnNewFruit();
         speed = INITIAL_SPEED;
         paused = false;
         gameOver = false;
+        music.stop();
+        music.playLoop("/snake/SnakeMusic.wav");
     }
 
     public void setDirection(Direction direction) {
@@ -94,5 +100,5 @@ public class SnakeGameLogic implements Resettable {
     public int getScore() {
         return snake.getScore();
     }
-    
+
 }
