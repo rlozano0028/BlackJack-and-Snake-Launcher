@@ -87,7 +87,7 @@ public class GamePane extends Pane {
 
     /** Returns the current snake score (number of fruits eaten). */
     public int getScore() {
-        return snake.getScore();
+        return gameLogic.getScore();
     }
 
     private void createTimeline() {
