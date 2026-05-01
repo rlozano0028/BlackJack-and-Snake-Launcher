@@ -352,8 +352,14 @@ public class GameManager extends Application {
 
         currentBlackjackMain = new Main();
         StackPane bjView = currentBlackjackMain.buildView();
-        currentBlackjackMain.music();
 
+        int storedHigh = scoreService.getUserScore("BLACKJACK", currentUser);
+        currentBlackjackMain.setHighScore(storedHigh, () ->
+            scoreService.updateScore("BLACKJACK", currentUser,
+                                     currentBlackjackMain.getCurrentScore())
+        );
+
+        currentBlackjackMain.music();
         root.setCenter(bjView);
     }
 
@@ -385,6 +391,11 @@ public class GameManager extends Application {
                 errorLabel.setText("Invalid save string. Please check it and try again.");
             } else {
                 errorLabel.setText("");
+                int storedHigh = scoreService.getUserScore("BLACKJACK", currentUser);
+                currentBlackjackMain.setHighScore(storedHigh, () ->
+                    scoreService.updateScore("BLACKJACK", currentUser,
+                                             currentBlackjackMain.getCurrentScore())
+                );
                 currentBlackjackMain.music();
                 root.setTop(buildToolBar());
                 root.setCenter(bjView);

@@ -39,7 +39,8 @@ public class ScoreService {
      * but only if no entry already exists for that (game, username) pair.
      */
     public void ensureDefaultScore(String username) {
-        ensureEntry("BLACKJACK", username, 1000);
+        ensureEntry("BLACKJACK", username, 100);
+        migrateScore("BLACKJACK", username, 1000, 100); // downgrade old default
         ensureEntry("SNAKE", username, 1000);
     }
 
@@ -73,9 +74,43 @@ public class ScoreService {
         writeLines(lines);
     }
 
+    /**
+     * Returns the stored score for the given (game, username) pair, or 0 if
+     * no entry exists.  Used to seed the in-game high-score threshold.
+     */
+    public int getUserScore(String game, String username) {
+        for (String line : readLines()) {
+            String[] parts = line.split(":");
+            if (parts.length != 3) continue;
+            if (parts[0].equals(game) && parts[1].equals(username)) {
+                try { return Integer.parseInt(parts[2].trim()); }
+                catch (NumberFormatException ignored) {}
+            }
+        }
+        return 0;
+    }
+
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
+
+    /** Replaces {@code oldValue} with {@code newValue} for an exact (game, username, oldValue) match. */
+    private void migrateScore(String game, String username, int oldValue, int newValue) {
+        List<String> lines = readLines();
+        boolean changed = false;
+        for (int i = 0; i < lines.size(); i++) {
+            String[] parts = lines.get(i).split(":");
+            if (parts.length != 3) continue;
+            if (!parts[0].equals(game) || !parts[1].equals(username)) continue;
+            try {
+                if (Integer.parseInt(parts[2].trim()) == oldValue) {
+                    lines.set(i, game + ":" + username + ":" + newValue);
+                    changed = true;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        if (changed) writeLines(lines);
+    }
 
     private void ensureEntry(String game, String username, int defaultScore) {
         List<String> lines = readLines();

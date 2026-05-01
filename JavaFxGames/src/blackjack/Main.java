@@ -89,6 +89,13 @@ public class Main extends Application
     // card renderers suppress the previous round's cards until Deal is clicked.
     private boolean tableClear;
 
+    // High score / streak tracking
+    private int      sessionHighScore;     // threshold loaded from ScoreService at launch
+    private int      highScoreStreak;      // consecutive rounds that set a new high score
+    private boolean  roundEndChecked;      // prevents double-firing per round end
+    private Label    highScoreStreakLabel; // in-game indicator ("New High Score!" / "Hot Streak xN")
+    private Runnable onNewHighScore;       // callback → GameManager persists to disk
+
     // Animation overlay — transparent Pane that sits on top so animated cards
     // can fly freely across the full window.
     private Pane overlayPane;
@@ -192,6 +199,16 @@ public class Main extends Application
         return (int) game.getHuman().getAccount().getTotal();
     }
 
+    /**
+     * Seeds the in-game high-score threshold and registers the callback that
+     * GameManager uses to persist a new high score to disk after each round.
+     * Must be called after {@link #buildView()} or {@link #buildViewFromSave}.
+     */
+    public void setHighScore(int storedScore, Runnable callback) {
+        this.sessionHighScore = storedScore;
+        this.onNewHighScore   = callback;
+    }
+
     // -----------------------------------------------------------------------
     // Music
     // -----------------------------------------------------------------------
@@ -259,6 +276,17 @@ public class Main extends Application
         turnBannerLabel.setPadding(new Insets(6, 20, 6, 20));
         turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
 
+        highScoreStreakLabel = new Label("");
+        highScoreStreakLabel.setFont(Font.font("Arial", FontWeight.BOLD, 17));
+        highScoreStreakLabel.setTextFill(Color.web("#FFD700"));
+        highScoreStreakLabel.setPadding(new Insets(5, 18, 5, 18));
+        highScoreStreakLabel.setStyle(
+            "-fx-background-color: rgba(0,0,0,0.45);" +
+            "-fx-background-radius: 14;" +
+            "-fx-effect: dropshadow(gaussian, rgba(255,200,0,0.6), 10, 0.4, 0, 0);"
+        );
+        highScoreStreakLabel.setVisible(false);
+
         Circle chip = new Circle(34, Color.web("#e63946"));
         chip.setStroke(Color.web("#f1faee"));
         chip.setStrokeWidth(4);
@@ -272,7 +300,7 @@ public class Main extends Application
 
         deckNode = buildDeckPile();
 
-        VBox center = new VBox(10, messageLabel, turnBannerLabel, chipStack, deckNode);
+        VBox center = new VBox(10, messageLabel, turnBannerLabel, highScoreStreakLabel, chipStack, deckNode);
         center.setAlignment(Pos.CENTER);
 
         StackPane wrapper = new StackPane(center);
@@ -433,7 +461,8 @@ public class Main extends Application
         deal.setOnAction(e -> {
             System.out.println("Deal clicked");
             if (game.startRound(game.getHuman().getAccount().getCurrentBet())) {
-                tableClear = false; // round is now active; card renderers should render normally
+                tableClear      = false; // round is now active; card renderers should render normally
+                roundEndChecked = false; // allow checkHighScore() to fire when this round ends
                 dealerCardsBox.getChildren().clear();
                 playerCardsBox.getChildren().clear();
                 ai1CardsBox.getChildren().clear();
@@ -906,6 +935,12 @@ public class Main extends Application
             raiseBetBtn.setText("Initial Bet");
         }
 
+        // High score check — fires exactly once per round end
+        if (game.getCurrentTurn() == BlackjackGame.Turn.ROUND_OVER && !roundEndChecked) {
+            roundEndChecked = true;
+            checkHighScore();
+        }
+
         if (!game.isRoundActive() && game.getHuman().getAccount().getCurrentBet() > 0) {
             hasPlacedInitialBet = true;
             raiseBetBtn.setText("Raise");
@@ -1014,6 +1049,44 @@ public class Main extends Application
         if (humanVal > dealerVal) return "WIN";
         if (humanVal < dealerVal) return "LOSE";
         return "PUSH";
+    }
+
+    // -----------------------------------------------------------------------
+    // High score / streak
+    // -----------------------------------------------------------------------
+
+    /**
+     * Called once per round end.  Compares the current bankroll to the in-session
+     * high score, updates the streak, and triggers the visual indicator or hides it.
+     */
+    private void checkHighScore() {
+        int bank = (int) game.getHuman().getAccount().getTotal();
+        if (bank > sessionHighScore) {
+            sessionHighScore = bank;
+            highScoreStreak++;
+            if (onNewHighScore != null) onNewHighScore.run();
+            showHighScoreIndicator();
+        } else {
+            highScoreStreak = 0;
+            highScoreStreakLabel.setVisible(false);
+        }
+    }
+
+    /** Displays and pulses the "New High Score!" / "Hot Streak xN" banner. */
+    private void showHighScoreIndicator() {
+        String text = (highScoreStreak == 1)
+            ? "  New High Score!  "
+            : "  Hot Streak x" + highScoreStreak + "  ";
+        highScoreStreakLabel.setText(text);
+        highScoreStreakLabel.setVisible(true);
+
+        javafx.animation.FadeTransition pulse =
+            new javafx.animation.FadeTransition(Duration.millis(500), highScoreStreakLabel);
+        pulse.setFromValue(0.3);
+        pulse.setToValue(1.0);
+        pulse.setCycleCount(6);
+        pulse.setAutoReverse(true);
+        pulse.play();
     }
 
     // -----------------------------------------------------------------------
