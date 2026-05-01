@@ -60,6 +60,14 @@ public class Main extends Application
 
     private Label messageLabel;
 
+    // Turn indicator
+    private Label               turnBannerLabel;
+    private Label               dealerArrow;
+    private Label               ai1Arrow;
+    private Label               ai2Arrow;
+    private Label               playerArrow;
+    private TranslateTransition activeArrowAnim;
+
     private HBox dealerCardsBox;
     private HBox playerCardsBox;
     private HBox ai1CardsBox;
@@ -215,7 +223,9 @@ public class Main extends Application
         Label name = sectionLabel("DEALER");
         dealerScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(16, name, dealerScoreLabel);
+        dealerArrow = arrowLabel();
+
+        HBox header = new HBox(16, name, dealerScoreLabel, dealerArrow);
         header.setAlignment(Pos.CENTER);
 
         dealerCardsBox = new HBox(-30);
@@ -237,6 +247,12 @@ public class Main extends Application
         messageLabel.setTextFill(Color.web("#f1faee"));
         messageLabel.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 6, 0.2, 1, 2);");
 
+        turnBannerLabel = new Label("");
+        turnBannerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 15));
+        turnBannerLabel.setTextFill(Color.web("#f1faee"));
+        turnBannerLabel.setPadding(new Insets(6, 20, 6, 20));
+        turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
+
         Circle chip = new Circle(34, Color.web("#e63946"));
         chip.setStroke(Color.web("#f1faee"));
         chip.setStrokeWidth(4);
@@ -250,7 +266,7 @@ public class Main extends Application
 
         deckNode = buildDeckPile();
 
-        VBox center = new VBox(18, messageLabel, chipStack, deckNode);
+        VBox center = new VBox(10, messageLabel, turnBannerLabel, chipStack, deckNode);
         center.setAlignment(Pos.CENTER);
 
         StackPane wrapper = new StackPane(center);
@@ -297,7 +313,9 @@ public class Main extends Application
         Label name = sectionLabel("AI 1");
         ai1ScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(12, name, ai1ScoreLabel);
+        ai1Arrow = arrowLabel();
+
+        HBox header = new HBox(12, name, ai1ScoreLabel, ai1Arrow);
         header.setAlignment(Pos.CENTER);
         header.setTranslateY(-30);
 
@@ -324,7 +342,9 @@ public class Main extends Application
         Label name = sectionLabel("AI 2");
         ai2ScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(12, name, ai2ScoreLabel);
+        ai2Arrow = arrowLabel();
+
+        HBox header = new HBox(12, name, ai2ScoreLabel, ai2Arrow);
         header.setAlignment(Pos.CENTER);
         header.setTranslateY(-30);
 
@@ -358,7 +378,9 @@ public class Main extends Application
         Label name = sectionLabel("YOU");
         playerScoreLabel = scoreBadge("0");
 
-        HBox header   = new HBox(16, name, playerScoreLabel);
+        playerArrow = arrowLabel();
+
+        HBox header   = new HBox(16, name, playerScoreLabel, playerArrow);
         header.setAlignment(Pos.CENTER);
 
         HBox infoRow   = buildInfoRow();
@@ -635,6 +657,92 @@ public class Main extends Application
     }
 
     // -----------------------------------------------------------------------
+    // Turn indicator
+    // -----------------------------------------------------------------------
+    private void updateTurnIndicator() {
+        // Stop any in-progress bounce animation from the previous turn
+        if (activeArrowAnim != null) {
+            activeArrowAnim.stop();
+            activeArrowAnim = null;
+        }
+
+        // Hide all arrows; the correct one is made visible below
+        dealerArrow.setVisible(false);
+        ai1Arrow.setVisible(false);
+        ai2Arrow.setVisible(false);
+        playerArrow.setVisible(false);
+
+        BlackjackGame.Turn turn = game.getCurrentTurn();
+
+        if (!game.isRoundActive() && turn != BlackjackGame.Turn.DEALER) {
+            turnBannerLabel.setText("");
+            turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
+            highlightScoreBadge(null);
+            return;
+        }
+
+        Label  arrowToShow;
+        Label  badgeToHighlight;
+        String bannerText;
+        String bannerColor;
+
+        switch (turn) {
+            case HUMAN -> {
+                arrowToShow      = playerArrow;
+                badgeToHighlight = playerScoreLabel;
+                bannerText       = "YOUR TURN";
+                bannerColor      = "#2a9d8f";
+            }
+            case AI1 -> {
+                arrowToShow      = ai1Arrow;
+                badgeToHighlight = ai1ScoreLabel;
+                bannerText       = "AI 1's TURN";
+                bannerColor      = "#457b9d";
+            }
+            case AI2 -> {
+                arrowToShow      = ai2Arrow;
+                badgeToHighlight = ai2ScoreLabel;
+                bannerText       = "AI 2's TURN";
+                bannerColor      = "#457b9d";
+            }
+            case DEALER -> {
+                arrowToShow      = dealerArrow;
+                badgeToHighlight = dealerScoreLabel;
+                bannerText       = "DEALER's TURN";
+                bannerColor      = "#6c3483";
+            }
+            default -> {
+                turnBannerLabel.setText("");
+                turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
+                highlightScoreBadge(null);
+                return;
+            }
+        }
+
+        // Show and animate the active section's arrow
+        arrowToShow.setVisible(true);
+        arrowToShow.setTranslateY(0);
+        TranslateTransition bounce = new TranslateTransition(Duration.millis(500), arrowToShow);
+        bounce.setFromY(0);
+        bounce.setToY(-6);
+        bounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        bounce.setAutoReverse(true);
+        bounce.play();
+        activeArrowAnim = bounce;
+
+        // Update the central turn banner
+        turnBannerLabel.setText("  " + bannerText + "  ");
+        turnBannerLabel.setStyle(
+            "-fx-background-color: " + bannerColor + ";" +
+            "-fx-background-radius: 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+        );
+
+        // Highlight the active player's score badge gold
+        highlightScoreBadge(badgeToHighlight);
+    }
+
+    // -----------------------------------------------------------------------
     // UI update
     // -----------------------------------------------------------------------
     private void updateUI() {
@@ -697,6 +805,8 @@ public class Main extends Application
         hit.setDisable(!humanTurn);
         stand.setDisable(!humanTurn);
         deal.setDisable(game.isRoundActive());
+
+        updateTurnIndicator();
     }
 
     // -----------------------------------------------------------------------
@@ -751,6 +861,37 @@ public class Main extends Application
     private String formatMoney(double amount) {
         if (amount == (int) amount) return Integer.toString((int) amount);
         return String.format("%.2f", amount);
+    }
+
+    /** Creates the hidden, bouncing arrow label used as a per-section turn pointer. */
+    private Label arrowLabel() {
+        Label l = new Label("\u25BC");
+        l.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        l.setTextFill(Color.web("#FFD700"));
+        l.setStyle("-fx-effect: dropshadow(gaussian, rgba(255,200,0,0.7), 8, 0.4, 0, 0);");
+        l.setVisible(false);
+        return l;
+    }
+
+    /** Turns the active badge gold; resets all others to the default white style. */
+    private void highlightScoreBadge(Label active) {
+        String defaultStyle =
+            "-fx-background-color: #f1faee;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: #1d3557;" +
+            "-fx-border-radius: 14;" +
+            "-fx-border-width: 2;";
+        String activeStyle =
+            "-fx-background-color: #FFD700;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: #b8860b;" +
+            "-fx-border-radius: 14;" +
+            "-fx-border-width: 2;";
+
+        for (Label badge : new Label[]{dealerScoreLabel, playerScoreLabel, ai1ScoreLabel, ai2ScoreLabel}) {
+            badge.setStyle(badge == active ? activeStyle : defaultStyle);
+            badge.setTextFill(Color.web("#1d3557"));
+        }
     }
 
     private Label sectionLabel(String text) {
