@@ -875,9 +875,16 @@ public class Main extends Application
             dealerScoreLabel.setText(game.getDealer().getVisibleHandValue() + " + ?");
         }
 
-        playerScoreLabel.setText(String.valueOf(game.getHuman().getHandValue()));
-        ai1ScoreLabel.setText(String.valueOf(game.getAi1().getHandValue()));
-        ai2ScoreLabel.setText(String.valueOf(game.getAi2().getHandValue()));
+        if (tableClear && !game.isRoundActive()) {
+            dealerScoreLabel.setText("0");
+            playerScoreLabel.setText("0");
+            ai1ScoreLabel.setText("0");
+            ai2ScoreLabel.setText("0");
+        } else {
+            playerScoreLabel.setText(String.valueOf(game.getHuman().getHandValue()));
+            ai1ScoreLabel.setText(String.valueOf(game.getAi1().getHandValue()));
+            ai2ScoreLabel.setText(String.valueOf(game.getAi2().getHandValue()));
+        }
 
         bankrollLabel.setText("Bankroll $" + formatMoney(game.getHuman().getAccount().getTotal()));
         betLabel.setText("Current Bet $" + formatMoney(game.getHuman().getAccount().getCurrentBet()));
