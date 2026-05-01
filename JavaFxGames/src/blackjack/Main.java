@@ -460,7 +460,31 @@ public class Main extends Application
         stand.setOnAction(e -> {
             System.out.println("Stand clicked");
             game.humanStand();
-            updateUI();
+            // Game logic is complete (AI + dealer turns ran synchronously).
+            // Animate the dealer's reveal / extra draws before showing final state.
+            List<Card> dealerHand = game.getDealer().getHand();
+
+            // Restore dealer area to pre-reveal visuals so we can animate.
+            dealerCardsBox.getChildren().clear();
+            dealerCardsBox.getChildren().add(
+                CardView.faceUp(dealerHand.get(0).getRank(), suitToSymbol(dealerHand.get(0).getSuit()))
+            );
+            dealerCardsBox.getChildren().add(CardView.faceDown()); // hole card — will be flipped
+
+            activateDealerTurnDisplay();
+            setButtonsDisabled(true);
+
+            // 1) Flip the hole card in-place, then 2) animate any extra draws.
+            flipCardInBox(1, dealerHand.get(1), dealerCardsBox, () -> {
+                List<CardInfo> extra = new ArrayList<>();
+                for (int i = 2; i < dealerHand.size(); i++) {
+                    extra.add(new CardInfo(dealerHand.get(i), dealerCardsBox, false));
+                }
+                animateDeal(extra, () -> {
+                    setButtonsDisabled(false);
+                    updateUI();
+                });
+            });
         });
 
         saveBtn.setOnAction(e -> showSaveDialog());
@@ -654,6 +678,72 @@ public class Main extends Application
         stand.setDisable(disabled);
         raiseBetBtn.setDisable(disabled);
         raiseSpinner.setDisable(disabled);
+    }
+
+    /**
+     * Manually activate the "DEALER's TURN" indicator UI elements.
+     * Used during dealer card animations when the game model has already
+     * advanced past the dealer turn (currentTurn == ROUND_OVER).
+     */
+    private void activateDealerTurnDisplay() {
+        if (activeArrowAnim != null) {
+            activeArrowAnim.stop();
+            activeArrowAnim = null;
+        }
+        dealerArrow.setVisible(false);
+        ai1Arrow.setVisible(false);
+        ai2Arrow.setVisible(false);
+        playerArrow.setVisible(false);
+
+        dealerArrow.setVisible(true);
+        dealerArrow.setTranslateY(0);
+        TranslateTransition bounce = new TranslateTransition(Duration.millis(500), dealerArrow);
+        bounce.setFromY(0);
+        bounce.setToY(-6);
+        bounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        bounce.setAutoReverse(true);
+        bounce.play();
+        activeArrowAnim = bounce;
+
+        turnBannerLabel.setText("  DEALER's TURN  ");
+        turnBannerLabel.setStyle(
+            "-fx-background-color: #6c3483;" +
+            "-fx-background-radius: 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+        );
+        highlightScoreBadge(dealerScoreLabel);
+    }
+
+    /**
+     * Animates an in-place Y-axis flip of the card node at {@code index} inside
+     * {@code box}, replacing it with a face-up view of {@code card} at the halfway
+     * point of the flip.  Calls {@code onComplete} when the animation finishes.
+     */
+    private void flipCardInBox(int index, Card card, HBox box, Runnable onComplete) {
+        if (index < 0 || index >= box.getChildren().size()) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        javafx.scene.Node existing = box.getChildren().get(index);
+
+        RotateTransition rotateOut = new RotateTransition(Duration.millis(150), existing);
+        rotateOut.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+        rotateOut.setFromAngle(0);
+        rotateOut.setToAngle(90);
+
+        rotateOut.setOnFinished(ev -> {
+            CardView faceUp = CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit()));
+            box.getChildren().set(index, faceUp);
+
+            RotateTransition rotateIn = new RotateTransition(Duration.millis(150), faceUp);
+            rotateIn.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+            rotateIn.setFromAngle(-90);
+            rotateIn.setToAngle(0);
+            rotateIn.setOnFinished(e2 -> { if (onComplete != null) onComplete.run(); });
+            rotateIn.play();
+        });
+
+        rotateOut.play();
     }
 
     // -----------------------------------------------------------------------
