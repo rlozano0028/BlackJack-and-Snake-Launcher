@@ -60,6 +60,9 @@ public class Main extends Application
 
     private Label messageLabel;
 
+    // Round-outcome badge shown over the player's card area
+    private Label playerResultLabel;
+
     // Turn indicator
     private Label               turnBannerLabel;
     private Label               dealerArrow;
@@ -375,6 +378,14 @@ public class Main extends Application
         playerCardsBox = new HBox(-30);
         playerCardsBox.setAlignment(Pos.CENTER);
 
+        // Outcome badge (BUST / BLACKJACK / YOU WIN! / etc.) sits above the card row
+        playerResultLabel = new Label("");
+        playerResultLabel.setFont(Font.font("Arial", FontWeight.BOLD, 26));
+        playerResultLabel.setTextFill(Color.WHITE);
+        playerResultLabel.setPadding(new Insets(8, 22, 8, 22));
+        playerResultLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 12;");
+        playerResultLabel.setVisible(false);
+
         Label name = sectionLabel("YOU");
         playerScoreLabel = scoreBadge("0");
 
@@ -387,7 +398,7 @@ public class Main extends Application
         HBox buttonRow = buildButtonRow();
         HBox raiseRow  = buildRaiseRow();
 
-        VBox box = new VBox(12, playerCardsBox, header, infoRow, buttonRow, raiseRow);
+        VBox box = new VBox(12, playerResultLabel, playerCardsBox, header, infoRow, buttonRow, raiseRow);
         box.setAlignment(Pos.CENTER);
         box.setPadding(new Insets(10, 0, 0, 0));
         return box;
@@ -513,6 +524,13 @@ public class Main extends Application
             if (raiseApplied && !hasPlacedInitialBet) {
                 hasPlacedInitialBet = true;
                 raiseBetBtn.setText("Raise");
+                // Clear previous round's cards and outcome badge so the table
+                // looks clean while the player decides how much to bet / deal.
+                dealerCardsBox.getChildren().clear();
+                playerCardsBox.getChildren().clear();
+                ai1CardsBox.getChildren().clear();
+                ai2CardsBox.getChildren().clear();
+                playerResultLabel.setVisible(false);
             }
             updateUI();
         });
@@ -765,9 +783,24 @@ public class Main extends Application
         BlackjackGame.Turn turn = game.getCurrentTurn();
 
         if (!game.isRoundActive() && turn != BlackjackGame.Turn.DEALER) {
-            turnBannerLabel.setText("");
-            turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
-            highlightScoreBadge(null);
+            // Between rounds: prompt the player to place their bet
+            playerArrow.setVisible(true);
+            playerArrow.setTranslateY(0);
+            TranslateTransition bettingBounce = new TranslateTransition(Duration.millis(500), playerArrow);
+            bettingBounce.setFromY(0);
+            bettingBounce.setToY(-6);
+            bettingBounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+            bettingBounce.setAutoReverse(true);
+            bettingBounce.play();
+            activeArrowAnim = bettingBounce;
+
+            turnBannerLabel.setText("  CHOOSE BET  ");
+            turnBannerLabel.setStyle(
+                "-fx-background-color: #e76f51;" +
+                "-fx-background-radius: 16;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+            );
+            highlightScoreBadge(playerScoreLabel);
             return;
         }
 
@@ -897,6 +930,85 @@ public class Main extends Application
         deal.setDisable(game.isRoundActive());
 
         updateTurnIndicator();
+        updatePlayerResult();
+    }
+
+    // -----------------------------------------------------------------------
+    // Player outcome badge
+    // -----------------------------------------------------------------------
+
+    /**
+     * Updates the outcome badge that floats over the player's card area.
+     * Shows BUST!, BLACKJACK!, YOU WIN!, PUSH, or YOU LOSE depending on
+     * the current game state.  Hidden during active play and before the first deal.
+     */
+    private void updatePlayerResult() {
+        Player human  = game.getHuman();
+        Dealer dealer = game.getDealer();
+
+        // No cards yet — betting phase; hide everything
+        if (human.getHand().isEmpty()) {
+            playerResultLabel.setVisible(false);
+            return;
+        }
+
+        String text;
+        String bgColor;
+
+        Player.Status status = human.getStatus();
+
+        if (status == Player.Status.BUST) {
+            text    = "BUST!";
+            bgColor = "rgba(230,57,70,0.88)";
+        } else if (status == Player.Status.BLACKJACK) {
+            text    = "BLACKJACK!";
+            bgColor = "rgba(200,160,0,0.90)";
+        } else if (!game.isRoundActive()) {
+            // Round finished — show the settled outcome
+            switch (resolveHumanOutcome()) {
+                case "WIN"  -> { text = "YOU WIN!";  bgColor = "rgba(42,157,143,0.88)"; }
+                case "LOSE" -> { text = "YOU LOSE";  bgColor = "rgba(80,80,80,0.78)";   }
+                case "PUSH" -> { text = "PUSH";      bgColor = "rgba(70,100,140,0.80)"; }
+                default     -> { playerResultLabel.setVisible(false); return; }
+            }
+        } else {
+            // Round active and player is still PLAYING or STAND — no badge
+            playerResultLabel.setVisible(false);
+            return;
+        }
+
+        playerResultLabel.setText(text);
+        playerResultLabel.setStyle(
+            "-fx-background-color: " + bgColor + ";" +
+            "-fx-background-radius: 12;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 10, 0.3, 0, 2);"
+        );
+        playerResultLabel.setVisible(true);
+    }
+
+    /**
+     * Mirrors the {@code settlePlayer(human)} logic from {@link BlackjackGame}
+     * and returns the human player's outcome as a string: "WIN", "LOSE", or "PUSH".
+     * Call only when the round is no longer active.
+     */
+    private String resolveHumanOutcome() {
+        Player human  = game.getHuman();
+        Dealer dealer = game.getDealer();
+
+        if (human.getStatus()  == Player.Status.BUST)      return "LOSE";
+        if (dealer.getStatus() == Player.Status.BUST)      return "WIN";
+
+        if (human.getStatus()  == Player.Status.BLACKJACK
+                && dealer.getStatus() != Player.Status.BLACKJACK) return "WIN";
+        if (dealer.getStatus() == Player.Status.BLACKJACK
+                && human.getStatus()  != Player.Status.BLACKJACK) return "LOSE";
+
+        int humanVal  = human.getHandValue();
+        int dealerVal = dealer.getHandValue();
+
+        if (humanVal > dealerVal) return "WIN";
+        if (humanVal < dealerVal) return "LOSE";
+        return "PUSH";
     }
 
     // -----------------------------------------------------------------------
