@@ -85,6 +85,9 @@ public class Main extends Application
 
     private int raiseAmt;
     private boolean hasPlacedInitialBet;
+    // Set to true when the player explicitly places their initial bet so the
+    // card renderers suppress the previous round's cards until Deal is clicked.
+    private boolean tableClear;
 
     // Animation overlay — transparent Pane that sits on top so animated cards
     // can fly freely across the full window.
@@ -430,6 +433,7 @@ public class Main extends Application
         deal.setOnAction(e -> {
             System.out.println("Deal clicked");
             if (game.startRound(game.getHuman().getAccount().getCurrentBet())) {
+                tableClear = false; // round is now active; card renderers should render normally
                 dealerCardsBox.getChildren().clear();
                 playerCardsBox.getChildren().clear();
                 ai1CardsBox.getChildren().clear();
@@ -524,13 +528,7 @@ public class Main extends Application
             if (raiseApplied && !hasPlacedInitialBet) {
                 hasPlacedInitialBet = true;
                 raiseBetBtn.setText("Raise");
-                // Clear previous round's cards and outcome badge so the table
-                // looks clean while the player decides how much to bet / deal.
-                dealerCardsBox.getChildren().clear();
-                playerCardsBox.getChildren().clear();
-                ai1CardsBox.getChildren().clear();
-                ai2CardsBox.getChildren().clear();
-                playerResultLabel.setVisible(false);
+                tableClear = true; // card renderers will suppress old cards on next updateUI()
             }
             updateUI();
         });
@@ -946,8 +944,8 @@ public class Main extends Application
         Player human  = game.getHuman();
         Dealer dealer = game.getDealer();
 
-        // No cards yet — betting phase; hide everything
-        if (human.getHand().isEmpty()) {
+        // No cards yet, or initial bet placed and waiting to deal — keep table clean
+        if (human.getHand().isEmpty() || (tableClear && !game.isRoundActive())) {
             playerResultLabel.setVisible(false);
             return;
         }
@@ -1016,6 +1014,7 @@ public class Main extends Application
     // -----------------------------------------------------------------------
     private void updateDealerCards() {
         dealerCardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return; // initial bet placed, waiting to deal
         for (int i = 0; i < game.getDealer().getHand().size(); i++) {
             Card card = game.getDealer().getHand().get(i);
             if (i == 1 && !game.getDealer().isHoleCardRevealed()) {
@@ -1028,6 +1027,7 @@ public class Main extends Application
 
     private void updateHumanCards() {
         playerCardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getHuman().getHand()) {
             playerCardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
@@ -1035,6 +1035,7 @@ public class Main extends Application
 
     private void updateAI1Cards() {
         ai1CardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getAi1().getHand()) {
             ai1CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
@@ -1042,6 +1043,7 @@ public class Main extends Application
 
     private void updateAI2Cards() {
         ai2CardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getAi2().getHand()) {
             ai2CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
