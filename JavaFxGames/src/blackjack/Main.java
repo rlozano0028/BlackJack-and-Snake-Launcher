@@ -630,7 +630,6 @@ public class Main extends Application
         deal.setDisable(disabled);
         hit.setDisable(disabled);
         stand.setDisable(disabled);
-        saveBtn.setDisable(disabled);
         raiseBetBtn.setDisable(disabled);
         raiseSpinner.setDisable(disabled);
     }
