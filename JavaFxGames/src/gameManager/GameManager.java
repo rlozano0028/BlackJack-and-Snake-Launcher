@@ -6,8 +6,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
@@ -238,7 +242,7 @@ public class GameManager extends Application {
         bjBtn.setPrefWidth(200);
         snakeBtn.setPrefWidth(200);
 
-        bjBtn.setOnAction(e -> blackjackGame());
+        bjBtn.setOnAction(e -> blackjackMainMenu());
         snakeBtn.setOnAction(e -> snakeGame());
 
         VBox launcherPane = new VBox(15, launchTitle, bjBtn, snakeBtn);
@@ -318,7 +322,32 @@ public class GameManager extends Application {
         Platform.runLater(() -> currentSnakePane.requestFocus());                            
     }
 
-    private void blackjackGame() {
+    private void blackjackMainMenu() {
+        root.setTop(buildToolBar());
+
+        Label title    = new Label("Blackjack");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 32));
+
+        Label subtitle = new Label("Choose how to start:");
+        subtitle.setFont(Font.font("Arial", 16));
+
+        Button newGameBtn  = new Button("New Game");
+        Button loadGameBtn = new Button("Load Saved Game");
+        newGameBtn.setPrefWidth(220);
+        loadGameBtn.setPrefWidth(220);
+
+        Label errorLabel = new Label("");
+        errorLabel.setStyle("-fx-text-fill: red;");
+
+        newGameBtn.setOnAction(e -> launchBlackjackNewGame());
+        loadGameBtn.setOnAction(e -> launchBlackjackFromSave(errorLabel));
+
+        VBox box = new VBox(20, title, subtitle, newGameBtn, loadGameBtn, errorLabel);
+        box.setAlignment(Pos.CENTER);
+        root.setCenter(box);
+    }
+
+    private void launchBlackjackNewGame() {
         root.setTop(buildToolBar());
 
         currentBlackjackMain = new Main();
@@ -326,6 +355,41 @@ public class GameManager extends Application {
         currentBlackjackMain.music();
 
         root.setCenter(bjView);
+    }
+
+    private void launchBlackjackFromSave(Label errorLabel) {
+        TextArea textArea = new TextArea();
+        textArea.setWrapText(true);
+        textArea.setPromptText("Paste your save string here...");
+        textArea.setPrefRowCount(6);
+        textArea.setPrefWidth(520);
+
+        ButtonType loadBtnType = new ButtonType("Load", ButtonBar.ButtonData.OK_DONE);
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Load Blackjack Game");
+        dialog.setHeaderText("Paste your save string:");
+        dialog.getDialogPane().setContent(textArea);
+        dialog.getDialogPane().setPrefWidth(540);
+        dialog.getDialogPane().getButtonTypes().addAll(loadBtnType, ButtonType.CANCEL);
+        dialog.setResultConverter(btn -> (btn == loadBtnType) ? textArea.getText() : null);
+
+        dialog.showAndWait().ifPresent(text -> {
+            if (text == null || text.trim().isEmpty()) {
+                errorLabel.setText("Please paste a save string before clicking Load.");
+                return;
+            }
+            currentBlackjackMain = new Main();
+            StackPane bjView = currentBlackjackMain.buildViewFromSave(text.trim());
+            if (bjView == null) {
+                currentBlackjackMain = null;
+                errorLabel.setText("Invalid save string. Please check it and try again.");
+            } else {
+                errorLabel.setText("");
+                currentBlackjackMain.music();
+                root.setTop(buildToolBar());
+                root.setCenter(bjView);
+            }
+        });
     }
 
     // -----------------------------------------------------------------------

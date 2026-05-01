@@ -7,10 +7,15 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
@@ -63,7 +68,7 @@ public class Main extends Application
     private Button deal;
     private Button hit;
     private Button stand;
-    private Button reset;
+    private Button saveBtn;
     private Spinner<Integer> raiseSpinner;
     private Button raiseBetBtn;
 
@@ -141,6 +146,28 @@ public class Main extends Application
         StackPane sceneRoot = new StackPane(root, overlayPane);
         updateUI();
         return sceneRoot;
+    }
+
+    /**
+     * Builds the Blackjack UI from a previously generated save string.
+     * Returns null if the string is invalid so the caller can show an error.
+     * Internally calls buildView() to initialize all UI fields, then overwrites
+     * the game state with the restored data before returning.
+     */
+    public StackPane buildViewFromSave(String json) {
+        GameStateSaver.SaveResult result = GameStateSaver.load(json);
+        if (result == null) return null;
+
+        StackPane view = buildView();
+
+        game = result.game;
+        hasPlacedInitialBet = result.hasPlacedInitialBet;
+        raiseAmt = result.raiseAmt;
+        raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
+        raiseBetBtn.setText(hasPlacedInitialBet ? "Raise" : "Initial Bet");
+        updateUI();
+
+        return view;
     }
 
     /**
@@ -360,10 +387,12 @@ public class Main extends Application
 
     private HBox buildButtonRow()
     {
-        deal  = actionButton("Deal",  "#2a9d8f");
-        hit   = actionButton("Hit",   "#457b9d");
-        stand = actionButton("Stand", "#e76f51");
-        reset = actionButton("Reset", "#6c757d");
+        deal    = actionButton("Deal",      "#2a9d8f");
+        hit     = actionButton("Hit",       "#457b9d");
+        stand   = actionButton("Stand",     "#e76f51");
+        saveBtn = actionButton("Save Game", "#4a90d9");
+
+        saveBtn.setPrefWidth(130);
 
         deal.setOnAction(e -> {
             System.out.println("Deal clicked");
@@ -412,15 +441,9 @@ public class Main extends Application
             updateUI();
         });
 
-        reset.setOnAction(e -> {
-            System.out.println("Reset clicked");
-            game = new BlackjackGame();
-            hasPlacedInitialBet = false;
-            raiseBetBtn.setText("Initial Bet");
-            updateUI();
-        });
+        saveBtn.setOnAction(e -> showSaveDialog());
 
-        HBox row = new HBox(12, deal, hit, stand, reset);
+        HBox row = new HBox(10, deal, hit, stand, saveBtn);
         row.setAlignment(Pos.CENTER);
         row.setPadding(new Insets(10, 0, 0, 0));
         return row;
@@ -452,6 +475,77 @@ public class Main extends Application
         row.setAlignment(Pos.CENTER);
         row.setPadding(new Insets(4, 0, 0, 0));
         return row;
+    }
+
+    // -----------------------------------------------------------------------
+    // Save / Load dialogs
+    // -----------------------------------------------------------------------
+
+    private void showSaveDialog() {
+        String saveString = GameStateSaver.save(game, hasPlacedInitialBet, raiseAmt);
+
+        TextArea textArea = new TextArea(saveString);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefRowCount(6);
+        textArea.setPrefWidth(520);
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Save Game");
+        alert.setHeaderText("Copy this string to save your game:");
+        alert.getDialogPane().setContent(textArea);
+        alert.getDialogPane().setPrefWidth(540);
+
+        alert.setOnShown(ev -> {
+            textArea.selectAll();
+            textArea.requestFocus();
+        });
+
+        alert.showAndWait();
+    }
+
+    private void showLoadDialog() {
+        TextArea textArea = new TextArea();
+        textArea.setWrapText(true);
+        textArea.setPromptText("Paste your save string here...");
+        textArea.setPrefRowCount(6);
+        textArea.setPrefWidth(520);
+
+        ButtonType loadBtnType = new ButtonType("Load", ButtonBar.ButtonData.OK_DONE);
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Load Game");
+        dialog.setHeaderText("Paste your save string:");
+        dialog.getDialogPane().setContent(textArea);
+        dialog.getDialogPane().setPrefWidth(540);
+        dialog.getDialogPane().getButtonTypes().addAll(loadBtnType, ButtonType.CANCEL);
+        dialog.setResultConverter(btn -> (btn == loadBtnType) ? textArea.getText() : null);
+
+        dialog.showAndWait().ifPresent(text -> {
+            if (text == null || text.trim().isEmpty()) {
+                showLoadError("Please paste a save string before clicking Load.");
+                return;
+            }
+            GameStateSaver.SaveResult result = GameStateSaver.load(text.trim());
+            if (result == null) {
+                showLoadError("Invalid or corrupted save string.\n"
+                    + "Make sure you copied the complete, unmodified save string.");
+            } else {
+                game = result.game;
+                hasPlacedInitialBet = result.hasPlacedInitialBet;
+                raiseAmt = result.raiseAmt;
+                raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
+                raiseBetBtn.setText(hasPlacedInitialBet ? "Raise" : "Initial Bet");
+                updateUI();
+            }
+        });
+    }
+
+    private void showLoadError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Load Error");
+        alert.setHeaderText("Could not load game state");
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     // -----------------------------------------------------------------------
@@ -536,7 +630,7 @@ public class Main extends Application
         deal.setDisable(disabled);
         hit.setDisable(disabled);
         stand.setDisable(disabled);
-        reset.setDisable(disabled);
+        saveBtn.setDisable(disabled);
         raiseBetBtn.setDisable(disabled);
         raiseSpinner.setDisable(disabled);
     }

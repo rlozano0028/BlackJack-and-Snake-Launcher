@@ -34,6 +34,9 @@ public class Dealer extends Player
         return holeCardRevealed;
     }
 
+    /** For save/load restore only — directly sets the hole-card visibility flag. */
+    void setHoleCardRevealed(boolean revealed) { this.holeCardRevealed = revealed; }
+
     public boolean isSoft17() {
         List<Card> hand = getHand();
         int total = 0;

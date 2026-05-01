@@ -30,6 +30,22 @@ public class BlackjackGame {
         roundActive = false;
     }
 
+    /**
+     * Restoring constructor for save/load. Assigns all state directly —
+     * does NOT shuffle, deal, or call any game-logic methods.
+     */
+    BlackjackGame(Player human, Player ai1, Player ai2, Dealer dealer,
+                  Deck deck, Turn currentTurn, String statusMessage, boolean roundActive) {
+        this.human = human;
+        this.ai1 = ai1;
+        this.ai2 = ai2;
+        this.dealer = dealer;
+        this.deck = deck;
+        this.currentTurn = currentTurn;
+        this.statusMessage = statusMessage;
+        this.roundActive = roundActive;
+    }
+
     // getters for the javafx
     public Player getHuman() {
         return human;
@@ -57,6 +73,10 @@ public class BlackjackGame {
 
     public Turn getCurrentTurn() {
         return currentTurn;
+    }
+
+    public Deck getDeck() {
+        return deck;
     }
 
     public boolean startRound(double humanBet) {
