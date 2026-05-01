@@ -39,13 +39,19 @@ public class GamePane extends Pane {
     };
 
     public GamePane() {
-        canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT + TOP_BAR_HEIGHT);
+        // canvas = new Canvas(GameVariables.WIDTH, GameVariables.HEIGHT + TOP_BAR_HEIGHT);
+        canvas = new Canvas();
         gc = canvas.getGraphicsContext2D();
 
         gameLogic = new SnakeGameLogic();
         loadRandomFruitImage();
 
         getChildren().add(canvas);
+        canvas.widthProperty().bind(widthProperty());   
+        canvas.heightProperty().bind(heightProperty()); 
+
+        widthProperty().addListener((obs, o, n) -> redraw());  
+        heightProperty().addListener((obs, o, n) -> redraw());  
         setFocusTraversable(true);
 
         setOnKeyPressed(e -> {
@@ -125,6 +131,7 @@ public class GamePane extends Pane {
     }
 
     private void redraw() {
+        gc.clearRect(0, 0, getWidth(), getHeight());
         drawTopBar();
         drawGrid();
         drawSnake();
@@ -134,7 +141,8 @@ public class GamePane extends Pane {
 
     private void drawTopBar() {
         gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, GameVariables.WIDTH, TOP_BAR_HEIGHT);
+        // gc.fillRect(0, 0, GameVariables.WIDTH, TOP_BAR_HEIGHT);
+        gc.fillRect(0, 0, getWidth(), TOP_BAR_HEIGHT);
         
         gc.setFont(javafx.scene.text.Font.font(15));
         gc.setFill(Color.WHITE);
@@ -148,10 +156,19 @@ public class GamePane extends Pane {
         // gc.setStroke(Color.web("#2f924b"));
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(1);
-        gc.strokeRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        // gc.strokeRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        gc.strokeRect(
+            getOffsetX(),                    
+            getOffsetY(),                     
+            GameVariables.COLS * getTileSize(), 
+            GameVariables.ROWS * getTileSize());
     }
 
     private void drawGrid() {
+        double size = getTileSize();                
+        double offsetX = getOffsetX();               
+        double offsetY = getOffsetY();  
+        
         for (int row = 0; row < GameVariables.ROWS; row++) {
             for (int col = 0; col < GameVariables.COLS; col++) {
 
@@ -161,11 +178,17 @@ public class GamePane extends Pane {
                     gc.setFill(Color.web("#A2D149"));
                 }
 
+                // gc.fillRect(
+                //         col * GameVariables.TILE_SIZE,
+                //         row * GameVariables.TILE_SIZE + TOP_BAR_HEIGHT,
+                //         GameVariables.TILE_SIZE,
+                //         GameVariables.TILE_SIZE);             
+
                 gc.fillRect(
-                        col * GameVariables.TILE_SIZE,
-                        row * GameVariables.TILE_SIZE + TOP_BAR_HEIGHT,
-                        GameVariables.TILE_SIZE,
-                        GameVariables.TILE_SIZE);
+                    offsetX + col * size,                   
+                    offsetY + row * size,                   
+                    size,                                   
+                    size);
             }
         }
     }
@@ -179,51 +202,96 @@ public class GamePane extends Pane {
 
         for (int i = 1; i <= length; i++) {
             Position curr = snakePositions.get(snakePositions.size() - i);
-            int x = curr.getX();
-            int y = curr.getY() + TOP_BAR_HEIGHT;
+            // int x = curr.getX();
+            // int y = curr.getY() + TOP_BAR_HEIGHT;
 
-            gc.fillRect(x, y, GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
+            // gc.fillRect(x, y, GameVariables.TILE_SIZE, GameVariables.TILE_SIZE);
+
+            double size = getTileSize();          
+            double offsetX = getOffsetX();         
+            double offsetY = getOffsetY();         
+
+            double col = curr.getX() / (double) GameVariables.TILE_SIZE; 
+            double row = curr.getY() / (double) GameVariables.TILE_SIZE; 
+
+            gc.fillRect(
+                offsetX + col * size,            
+                offsetY + row * size,             
+                size,                              
+                size);
         }
     }
 
     private void drawFruit() {
         Position fruitPos = gameLogic.getFruit().getPosition();
 
-        gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY() + TOP_BAR_HEIGHT, GameVariables.TILE_SIZE,
-                GameVariables.TILE_SIZE);
+        // gc.drawImage(fruitImage, fruitPos.getX(), fruitPos.getY() + TOP_BAR_HEIGHT, GameVariables.TILE_SIZE,
+        //         GameVariables.TILE_SIZE);
+
+        double size = getTileSize();          
+        double offsetX = getOffsetX();         
+        double offsetY = getOffsetY();    
+
+        double col = fruitPos.getX() / (double) GameVariables.TILE_SIZE; 
+        double row = fruitPos.getY() / (double) GameVariables.TILE_SIZE; 
+
+        gc.drawImage(fruitImage,
+            offsetX + col * size,             
+            offsetY + row * size,          
+            size,                             
+            size);
     }
 
     private void drawPause() {
         gc.setFill(Color.color(0, 0, 0, 0.4));
         gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
-        gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        // gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        gc.fillRect(
+            getOffsetX(), 
+            getOffsetY(), 
+            GameVariables.COLS * getTileSize(), 
+            GameVariables.ROWS * getTileSize());
         gc.setFont(javafx.scene.text.Font.font(36));
         gc.setFill(Color.WHITE);
+        // gc.fillText("PAUSED", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT);
         gc.fillText("PAUSED", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT);
     }
 
     private void showGameOverOverlay() {
         gc.setFill(Color.color(0, 0, 0, 0.4));
-        gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        // gc.fillRect(0, TOP_BAR_HEIGHT, GameVariables.WIDTH, GameVariables.HEIGHT);
+        gc.fillRect(
+            getOffsetX(), 
+            getOffsetY(), 
+            GameVariables.COLS * getTileSize(), 
+            GameVariables.ROWS * getTileSize());
 
         gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
         gc.setFill(Color.WHITE);
 
         gc.setFont(javafx.scene.text.Font.font(36));
-        gc.fillText("GAME OVER", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT - 20);
+        // gc.fillText("GAME OVER", GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT - 20);
+        double centerX = getWidth() / 2.0;
+        double centerY = getOffsetY() + (GameVariables.ROWS * getTileSize()) / 2.0;
+        gc.fillText("GAME OVER", centerX, centerY - 20);
 
         gc.setFont(javafx.scene.text.Font.font(20));
-        gc.fillText("Score: " + gameLogic.getScore(), GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
+        // gc.fillText("Score: " + gameLogic.getScore(), GameVariables.WIDTH / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
+        gc.fillText("Score: " + gameLogic.getScore(), getWidth() / 2.0, GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 20);
 
         restartButton = new Button("Restart");
         restartButton.setPrefWidth(80);
-        restartButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
-        restartButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 40);
+        // restartButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
+        restartButton.setLayoutX(getWidth() / 2.0 - 40);
+        // restartButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 40);
+        restartButton.setLayoutY(centerY + 40); 
 
         Button exitButton = new Button("Exit");
         exitButton.setPrefWidth(80);
-        exitButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
-        exitButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 80);
+        // exitButton.setLayoutX(GameVariables.WIDTH / 2.0 - 40);
+        exitButton.setLayoutX(getWidth() / 2.0 - 40);
+        // exitButton.setLayoutY(GameVariables.HEIGHT / 2.0 + TOP_BAR_HEIGHT + 80);
+        exitButton.setLayoutY(centerY + 80);
         exitButton.setOnAction(e -> {
             if (onExit != null) onExit.run();
         });
@@ -239,5 +307,22 @@ public class GamePane extends Pane {
         });
 
         getChildren().addAll(restartButton, exitButton);
+    }
+
+    private double getTileSize() { 
+        double w = getWidth();
+        double h = getHeight() - TOP_BAR_HEIGHT;
+
+        return Math.min(
+            w / GameVariables.COLS,
+            h / GameVariables.ROWS);
+    }
+
+    private double getOffsetX() {
+        return (getWidth() - GameVariables.COLS * getTileSize()) / 2;
+    }
+
+    private double getOffsetY() { 
+        return TOP_BAR_HEIGHT + (getHeight() - TOP_BAR_HEIGHT - GameVariables.ROWS * getTileSize()) / 2;
     }
 }

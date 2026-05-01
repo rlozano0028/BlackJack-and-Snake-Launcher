@@ -12,7 +12,7 @@ public class SnakeGameControl extends Application{
         
         Scene scene = new Scene(gamePane, GameVariables.WIDTH, GameVariables.HEIGHT + 25);
         gamePane.requestFocus();
-        primaryStage.setTitle("SNAKE TESTING");
+        primaryStage.setTitle("SNAKE GAME");
         primaryStage.setScene(scene);
         primaryStage.show();
     }

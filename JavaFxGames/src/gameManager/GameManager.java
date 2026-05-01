@@ -316,8 +316,13 @@ public class GameManager extends Application {
         currentSnakePane = new GamePane();
         currentSnakePane.setOnExit(() -> goToMainMenu());
 
-        root.setCenter(currentSnakePane);
-        Platform.runLater(() -> currentSnakePane.requestFocus());
+        // root.setCenter(currentSnakePane);
+        // Platform.runLater(() -> currentSnakePane.requestFocus());
+
+        StackPane wrapper = new StackPane(currentSnakePane); 
+        wrapper.setAlignment(Pos.CENTER);                    
+        root.setCenter(wrapper);
+        Platform.runLater(() -> currentSnakePane.requestFocus());                            
     }
 
     private void blackjackGame() {
