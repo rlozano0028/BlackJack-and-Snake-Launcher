@@ -163,32 +163,43 @@ public class BlackjackGame {
     }
 
     /**
-     * Adds {@code additional} from bankroll to the current wager during the human turn.
+     * Adds {@code amount} from bankroll to the current wager during the human turn.
      * @return true if the raise was applied
      */
-    public boolean humanRaiseBet(double additional) {
-        if (!roundActive) {
-            if (!human.placeBet(additional)) {
-                statusMessage = "Not enough bankroll for that bet.";
-                return false;
-            }
-            statusMessage = "Initial bet placed.";
-            return true;
-        }
-        if (currentTurn != Turn.HUMAN) {
-            statusMessage = "You can't raise your bet right now.";
+    public boolean humanRaiseBet(double amount) {
+        if (roundActive) {
+            statusMessage = "You can't change your bet after the cards are dealt.";
             return false;
         }
-        if (human.getStatus() != Player.Status.PLAYING) {
-            statusMessage = "You can only raise while your hand is still in play.";
+        if (!human.placeBet(amount)) {
+            statusMessage = "Not enough bankroll for that bet.";
             return false;
         }
-        if (!human.raiseBet(additional)) {
-            statusMessage = "Not enough bankroll for that raise.";
-            return false;
-        }
-        statusMessage = "Bet increased.";
+        statusMessage = "Bet set.";
         return true;
+
+        // if (!roundActive) {
+        //     if (!human.placeBet(additional)) {
+        //         statusMessage = "Not enough bankroll for that bet.";
+        //         return false;
+        //     }
+        //     statusMessage = "Initial bet placed.";
+        //     return true;
+        // }
+        // if (currentTurn != Turn.HUMAN) {
+        //     statusMessage = "You can't raise your bet right now.";
+        //     return false;
+        // }
+        // if (human.getStatus() != Player.Status.PLAYING) {
+        //     statusMessage = "You can only raise while your hand is still in play.";
+        //     return false;
+        // }
+        // if (!human.raiseBet(additional)) {
+        //     statusMessage = "Not enough bankroll for that raise.";
+        //     return false;
+        // }
+        // statusMessage = "Bet increased.";
+        // return true;
     }
 
     public void advanceTurn() {

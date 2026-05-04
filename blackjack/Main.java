@@ -397,7 +397,7 @@ public class Main extends Application
             System.out.println("Reset clicked");
             game = new BlackjackGame();
             hasPlacedInitialBet = false;
-            raiseBetBtn.setText("Initial Bet");
+            raiseBetBtn.setText("Set Bet");
             updateUI();
         });
 
@@ -417,16 +417,19 @@ public class Main extends Application
         raiseSpinner.setEditable(true);
         raiseSpinner.setPrefWidth(100);
 
-        raiseBetBtn = actionButton("Initial Bet", "#8e44ad");
+        raiseBetBtn = actionButton("Set Bet", "#8e44ad");
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
-            raiseAmt = raiseSpinner.getValue();
-            game.humanRaiseBet(raiseAmt);
-            if (!hasPlacedInitialBet) {
-                hasPlacedInitialBet = true;
-                raiseBetBtn.setText("Raise");
+            try {
+                String text = raiseSpinner.getEditor().getText();
+                int value = Integer.parseInt(text);
+
+                game.humanRaiseBet(value);
+                updateUI();
+
+            } catch (NumberFormatException e1) {
+                messageLabel.setText("Invalid number");
             }
-            updateUI();
         });
 
         HBox row = new HBox(10, lbl, raiseSpinner, raiseBetBtn);
@@ -533,7 +536,7 @@ public class Main extends Application
         deal.setDisable(disabled);
         hit.setDisable(disabled);
         stand.setDisable(disabled);
-        reset.setDisable(disabled);
+        // reset.setDisable(disabled); allows users to reset whenever
         raiseBetBtn.setDisable(disabled);
         raiseSpinner.setDisable(disabled);
     }
@@ -570,9 +573,7 @@ public class Main extends Application
 
         boolean humanTurn = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
         int bankFloor = (int) Math.floor(game.getHuman().getAccount().getTotal());
-        boolean canPlaceInitialBet  = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
-        boolean canRaiseDuringTurn  = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
-        boolean canRaise = canPlaceInitialBet || canRaiseDuringTurn;
+        boolean canRaise = !game.isRoundActive() && bankFloor >= 1;
 
         if (canRaise) {
             SpinnerValueFactory.IntegerSpinnerValueFactory fac =
