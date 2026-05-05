@@ -1,4 +1,4 @@
-package blackjack;
+// package meow
 
 public class Card {
     private String suit;

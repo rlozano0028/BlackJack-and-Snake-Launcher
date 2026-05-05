@@ -1,18 +1,9 @@
-package blackjack;
-
-import java.util.Arrays;
 import java.util.Random;
 
 public class Deck {
     private Card[] cards = new Card[52];
     private int nextCardIndex = 0;
-
-    /** Restoring constructor: accepts a pre-ordered array of remaining cards. */
-    Deck(Card[] orderedCards) {
-        this.cards = Arrays.copyOf(orderedCards, orderedCards.length);
-        this.nextCardIndex = 0;
-    }
-
+    
     public Deck() {
         String[] suits = {"Club","Diamond","Hearts","Spade"};
         String[] ranks = {"A","2","3","4","5","6","7","8","9","10","J","Q","K"};
@@ -50,11 +41,6 @@ public class Deck {
         cards = shuffled;
         nextCardIndex = 0;
         
-    }
-
-    /** Returns a copy of all cards not yet drawn, in draw order. */
-    Card[] getRemainingCards() {
-        return Arrays.copyOfRange(cards, nextCardIndex, cards.length);
     }
 
     // draw next card

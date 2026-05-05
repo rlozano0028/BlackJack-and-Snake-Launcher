@@ -1,10 +1,10 @@
-package blackjack;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class BlackjackGame {
+    private static final double DEFAULT_BET = 10.0;
+
     public enum Turn {
         HUMAN, AI1, AI2, DEALER, ROUND_OVER
     }
@@ -28,22 +28,6 @@ public class BlackjackGame {
         currentTurn = Turn.HUMAN;
         statusMessage = "Place your bets.";
         roundActive = false;
-    }
-
-    /**
-     * Restoring constructor for save/load. Assigns all state directly —
-     * does NOT shuffle, deal, or call any game-logic methods.
-     */
-    BlackjackGame(Player human, Player ai1, Player ai2, Dealer dealer,
-                  Deck deck, Turn currentTurn, String statusMessage, boolean roundActive) {
-        this.human = human;
-        this.ai1 = ai1;
-        this.ai2 = ai2;
-        this.dealer = dealer;
-        this.deck = deck;
-        this.currentTurn = currentTurn;
-        this.statusMessage = statusMessage;
-        this.roundActive = roundActive;
     }
 
     // getters for the javafx
@@ -75,10 +59,6 @@ public class BlackjackGame {
         return currentTurn;
     }
 
-    public Deck getDeck() {
-        return deck;
-    }
-
     public boolean startRound(double humanBet) {
         double existingBet = human.getAccount().getCurrentBet();
         boolean hasPreplacedBet = existingBet > 0;
@@ -92,13 +72,13 @@ public class BlackjackGame {
         deck = new Deck();
         deck.shuffle();
         
-        // resets hands
+        // resets ahnds
         human.clearHand();
         ai1.clearHand();
         ai2.clearHand();
         dealer.clearHand();
 
-        // If the player already placed an initial bet pre-round,
+        // Put bets. If the player already placed an initial bet pre-round,
         // keep that wager and do not charge bankroll again.
         if (!hasPreplacedBet) {
             if (!human.placeBet(humanBet)) {
@@ -183,32 +163,43 @@ public class BlackjackGame {
     }
 
     /**
-     * Adds {@code additional} from bankroll to the current wager during the human turn.
+     * Adds {@code amount} from bankroll to the current wager during the human turn.
      * @return true if the raise was applied
      */
-    public boolean humanRaiseBet(double additional) {
-        if (!roundActive) {
-            if (!human.placeBet(additional)) {
-                statusMessage = "Not enough bankroll for that bet.";
-                return false;
-            }
-            statusMessage = "Initial bet placed.";
-            return true;
-        }
-        if (currentTurn != Turn.HUMAN) {
-            statusMessage = "You can't raise your bet right now.";
+    public boolean humanRaiseBet(double amount) {
+        if (roundActive) {
+            statusMessage = "You can't change your bet after the cards are dealt.";
             return false;
         }
-        if (human.getStatus() != Player.Status.PLAYING) {
-            statusMessage = "You can only raise while your hand is still in play.";
+        if (!human.placeBet(amount)) {
+            statusMessage = "Not enough bankroll for that bet.";
             return false;
         }
-        if (!human.raiseBet(additional)) {
-            statusMessage = "Not enough bankroll for that raise.";
-            return false;
-        }
-        statusMessage = "Bet increased.";
+        statusMessage = "Bet set.";
         return true;
+
+        // if (!roundActive) {
+        //     if (!human.placeBet(additional)) {
+        //         statusMessage = "Not enough bankroll for that bet.";
+        //         return false;
+        //     }
+        //     statusMessage = "Initial bet placed.";
+        //     return true;
+        // }
+        // if (currentTurn != Turn.HUMAN) {
+        //     statusMessage = "You can't raise your bet right now.";
+        //     return false;
+        // }
+        // if (human.getStatus() != Player.Status.PLAYING) {
+        //     statusMessage = "You can only raise while your hand is still in play.";
+        //     return false;
+        // }
+        // if (!human.raiseBet(additional)) {
+        //     statusMessage = "Not enough bankroll for that raise.";
+        //     return false;
+        // }
+        // statusMessage = "Bet increased.";
+        // return true;
     }
 
     public void advanceTurn() {
@@ -319,6 +310,18 @@ public class BlackjackGame {
         currentTurn = Turn.ROUND_OVER;
         roundActive = false;
         statusMessage = "Round over.";
+        queueDefaultHumanBet();
+    }
+
+    private void queueDefaultHumanBet() {
+        if (human.getAccount().getCurrentBet() > 0) {
+            return;
+        }
+        double bankroll = human.getAccount().getTotal();
+        double nextBet = Math.min(DEFAULT_BET, bankroll);
+        if (nextBet > 0) {
+            human.placeBet(nextBet);
+        }
     }
 
     private void settlePlayer(Player player) {

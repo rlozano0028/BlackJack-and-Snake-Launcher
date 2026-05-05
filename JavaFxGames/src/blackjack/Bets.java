@@ -1,5 +1,3 @@
-package blackjack;
-
 public class Bets 
 {
     private double total;
@@ -24,12 +22,6 @@ public class Bets
     {
         return currentBet;
     }
-
-    /** For save/load restore only — directly sets the bankroll without touching the bet. */
-    void setTotal(double total) { this.total = total; }
-
-    /** For save/load restore only — directly sets the wager without touching the bankroll. */
-    void setCurrentBet(double bet) { this.currentBet = bet; }
 
     public boolean placeBet(double amount) 
     {
