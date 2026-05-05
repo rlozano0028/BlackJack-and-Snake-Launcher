@@ -1,3 +1,5 @@
+package blackjack;
+
 import javafx.animation.RotateTransition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
