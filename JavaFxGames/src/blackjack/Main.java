@@ -7,10 +7,15 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
@@ -30,7 +35,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.media.Media;
@@ -38,7 +42,7 @@ import javafx.scene.media.MediaPlayer;
 
 import javafx.stage.Stage;
 
-public class Main extends Application 
+public class Main extends Application
 {
     private BlackjackGame game;
 
@@ -56,6 +60,17 @@ public class Main extends Application
 
     private Label messageLabel;
 
+    // Round-outcome badge shown over the player's card area
+    private Label playerResultLabel;
+
+    // Turn indicator
+    private Label               turnBannerLabel;
+    private Label               dealerArrow;
+    private Label               ai1Arrow;
+    private Label               ai2Arrow;
+    private Label               playerArrow;
+    private TranslateTransition activeArrowAnim;
+
     private HBox dealerCardsBox;
     private HBox playerCardsBox;
     private HBox ai1CardsBox;
@@ -64,15 +79,26 @@ public class Main extends Application
     private Button deal;
     private Button hit;
     private Button stand;
+    private Button saveBtn;
     private Button reset;
     private Spinner<Integer> raiseSpinner;
     private Button raiseBetBtn;
 
     private int raiseAmt;
     private boolean hasPlacedInitialBet;
+    // Set to true when the player explicitly places their initial bet so the
+    // card renderers suppress the previous round's cards until Deal is clicked.
+    private boolean tableClear;
 
-    // Animation overlay — a transparent Pane that sits on top of everything
-    // so animated cards can fly freely across the full window.
+    // High score / streak tracking
+    private int      sessionHighScore;     // threshold loaded from ScoreService at launch
+    private int      highScoreStreak;      // consecutive rounds that set a new high score
+    private boolean  roundEndChecked;      // prevents double-firing per round end
+    private Label    highScoreStreakLabel; // in-game indicator ("New High Score!" / "Hot Streak xN")
+    private Runnable onNewHighScore;       // callback → GameManager persists to disk
+
+    // Animation overlay — transparent Pane that sits on top so animated cards
+    // can fly freely across the full window.
     private Pane overlayPane;
 
     // The visual deck pile in the center; used as the animation origin.
@@ -84,7 +110,7 @@ public class Main extends Application
     private static class CardInfo {
         final Card   card;
         final HBox   targetBox;
-        final boolean faceDown;   // true = stay face-down after flip (dealer hole card)
+        final boolean faceDown;
 
         CardInfo(Card card, HBox targetBox, boolean faceDown) {
             this.card      = card;
@@ -94,29 +120,12 @@ public class Main extends Application
     }
 
     // -----------------------------------------------------------------------
-    // Application entry point
+    // Application entry point (standalone)
     // -----------------------------------------------------------------------
     @Override
-    public void start(Stage stage) 
+    public void start(Stage stage)
     {
-        game = new BlackjackGame();
-        hasPlacedInitialBet = false;
-        
-        BorderPane root = new BorderPane();
-        root.setBackground(new Background(new BackgroundFill(tableFelt(), CornerRadii.EMPTY, Insets.EMPTY)));
-        root.setPadding(new Insets(24));
-
-        root.setTop(buildDealerArea());
-        root.setCenter(buildCenterArea());
-        root.setBottom(buildBottomArea());
-
-        // Overlay pane: transparent, mouse-transparent, covers full window
-        overlayPane = new Pane();
-        overlayPane.setMouseTransparent(true);
-        overlayPane.setPickOnBounds(false);
-
-        // Wrap root + overlay so animations fly over everything
-        StackPane sceneRoot = new StackPane(root, overlayPane);
+        StackPane sceneRoot = buildView();
 
         Scene scene = new Scene(sceneRoot, 1180, 760);
         stage.setTitle("Blackjack");
@@ -134,16 +143,82 @@ public class Main extends Application
         stage.show();
         updateUI();
     }
-    
+
+    /**
+     * Builds and returns the full Blackjack UI as a StackPane (game table +
+     * animation overlay) that can be embedded in the GameManager without a
+     * dedicated Stage.
+     */
+    public StackPane buildView() {
+        game = new BlackjackGame();
+        hasPlacedInitialBet = false;
+
+        BorderPane root = new BorderPane();
+        root.setBackground(new Background(new BackgroundFill(tableFelt(), CornerRadii.EMPTY, Insets.EMPTY)));
+        root.setPadding(new Insets(24));
+
+        root.setTop(buildDealerArea());
+        root.setCenter(buildCenterArea());
+        root.setBottom(buildBottomArea());
+
+        overlayPane = new Pane();
+        overlayPane.setMouseTransparent(true);
+        overlayPane.setPickOnBounds(false);
+
+        StackPane sceneRoot = new StackPane(root, overlayPane);
+        updateUI();
+        return sceneRoot;
+    }
+
+    /**
+     * Builds the Blackjack UI from a previously generated save string.
+     * Returns null if the string is invalid so the caller can show an error.
+     * Internally calls buildView() to initialize all UI fields, then overwrites
+     * the game state with the restored data before returning.
+     */
+    public StackPane buildViewFromSave(String json) {
+        GameStateSaver.SaveResult result = GameStateSaver.load(json);
+        if (result == null) return null;
+
+        StackPane view = buildView();
+
+        game = result.game;
+        hasPlacedInitialBet = result.hasPlacedInitialBet;
+        raiseAmt = result.raiseAmt;
+        raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
+        raiseBetBtn.setText(hasPlacedInitialBet ? "Bet Placed" : "Place Bet");
+        updateUI();
+
+        return view;
+    }
+
+    /**
+     * Returns the human player's current bankroll — used by GameManager to
+     * record the high score when the player leaves.
+     */
+    public int getCurrentScore() {
+        return (int) game.getHuman().getAccount().getTotal();
+    }
+
+    /**
+     * Seeds the in-game high-score threshold and registers the callback that
+     * GameManager uses to persist a new high score to disk after each round.
+     * Must be called after {@link #buildView()} or {@link #buildViewFromSave}.
+     */
+    public void setHighScore(int storedScore, Runnable callback) {
+        this.sessionHighScore = storedScore;
+        this.onNewHighScore   = callback;
+    }
+
     // -----------------------------------------------------------------------
     // Music
     // -----------------------------------------------------------------------
     MediaPlayer mediaPlayer;
     public void music() {
         String[] candidates = {
-            "sound/Balatro-Main-Theme.mp3",          // running from project root
-            "../sound/Balatro-Main-Theme.mp3",        // running from blackjack/ folder
-            "JavaFxGames/sound/Balatro-Main-Theme.mp3" // running from project root (JavaFxGames layout)
+            "sound/Balatro-Main-Theme.mp3",            // running from project root
+            "JavaFxGames/sound/Balatro-Main-Theme.mp3", // JavaFxGames layout
+            "../sound/Balatro-Main-Theme.mp3"           // running from inside a subfolder
         };
         for (String s : candidates) {
             java.io.File f = new java.io.File(s);
@@ -157,15 +232,24 @@ public class Main extends Application
         System.out.println("Music not found/loaded.");
     }
 
+    public void stopMusic() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer = null;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Dealer zone (top)
     // -----------------------------------------------------------------------
-    private VBox buildDealerArea() 
+    private VBox buildDealerArea()
     {
         Label name = sectionLabel("DEALER");
         dealerScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(16, name, dealerScoreLabel);
+        dealerArrow = arrowLabel();
+
+        HBox header = new HBox(16, name, dealerScoreLabel, dealerArrow);
         header.setAlignment(Pos.CENTER);
 
         dealerCardsBox = new HBox(-30);
@@ -180,12 +264,29 @@ public class Main extends Application
     // -----------------------------------------------------------------------
     // Middle banner — also hosts the deck pile
     // -----------------------------------------------------------------------
-    private StackPane buildCenterArea() 
+    private StackPane buildCenterArea()
     {
         messageLabel = new Label("PLACE YOUR BET");
         messageLabel.setFont(Font.font("Arial", FontWeight.BOLD, 22));
         messageLabel.setTextFill(Color.web("#f1faee"));
         messageLabel.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 6, 0.2, 1, 2);");
+
+        turnBannerLabel = new Label("");
+        turnBannerLabel.setFont(Font.font("Arial", FontWeight.BOLD, 15));
+        turnBannerLabel.setTextFill(Color.web("#f1faee"));
+        turnBannerLabel.setPadding(new Insets(6, 20, 6, 20));
+        turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
+
+        highScoreStreakLabel = new Label("");
+        highScoreStreakLabel.setFont(Font.font("Arial", FontWeight.BOLD, 17));
+        highScoreStreakLabel.setTextFill(Color.web("#FFD700"));
+        highScoreStreakLabel.setPadding(new Insets(5, 18, 5, 18));
+        highScoreStreakLabel.setStyle(
+            "-fx-background-color: rgba(0,0,0,0.45);" +
+            "-fx-background-radius: 14;" +
+            "-fx-effect: dropshadow(gaussian, rgba(255,200,0,0.6), 10, 0.4, 0, 0);"
+        );
+        highScoreStreakLabel.setVisible(false);
 
         Circle chip = new Circle(34, Color.web("#e63946"));
         chip.setStroke(Color.web("#f1faee"));
@@ -198,10 +299,9 @@ public class Main extends Application
 
         StackPane chipStack = new StackPane(chip, chipAmount);
 
-        // Deck pile visual — several face-down cards stacked with slight offset
         deckNode = buildDeckPile();
 
-        VBox center = new VBox(18, messageLabel, chipStack, deckNode);
+        VBox center = new VBox(10, messageLabel, turnBannerLabel, highScoreStreakLabel, chipStack, deckNode);
         center.setAlignment(Pos.CENTER);
 
         StackPane wrapper = new StackPane(center);
@@ -209,7 +309,6 @@ public class Main extends Application
         return wrapper;
     }
 
-    // Build a small deck-of-cards visual (5 stacked face-down cards).
     private StackPane buildDeckPile() {
         StackPane pile = new StackPane();
         int layers = 5;
@@ -217,7 +316,6 @@ public class Main extends Application
             CardView c = CardView.faceDown();
             c.setScaleX(0.72);
             c.setScaleY(0.72);
-            // slight shadow-stack offset
             c.setTranslateX(-i * 1.2);
             c.setTranslateY(-i * 1.2);
             pile.getChildren().add(c);
@@ -250,7 +348,9 @@ public class Main extends Application
         Label name = sectionLabel("AI 1");
         ai1ScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(12, name, ai1ScoreLabel);
+        ai1Arrow = arrowLabel();
+
+        HBox header = new HBox(12, name, ai1ScoreLabel, ai1Arrow);
         header.setAlignment(Pos.CENTER);
         header.setTranslateY(-30);
 
@@ -277,7 +377,9 @@ public class Main extends Application
         Label name = sectionLabel("AI 2");
         ai2ScoreLabel = scoreBadge("0");
 
-        HBox header = new HBox(12, name, ai2ScoreLabel);
+        ai2Arrow = arrowLabel();
+
+        HBox header = new HBox(12, name, ai2ScoreLabel, ai2Arrow);
         header.setAlignment(Pos.CENTER);
         header.setTranslateY(-30);
 
@@ -303,28 +405,38 @@ public class Main extends Application
     // -----------------------------------------------------------------------
     // Player zone + controls
     // -----------------------------------------------------------------------
-    private VBox buildPlayerAndControls() 
+    private VBox buildPlayerAndControls()
     {
         playerCardsBox = new HBox(-30);
         playerCardsBox.setAlignment(Pos.CENTER);
 
+        // Outcome badge (BUST / BLACKJACK / YOU WIN! / etc.) sits above the card row
+        playerResultLabel = new Label("");
+        playerResultLabel.setFont(Font.font("Arial", FontWeight.BOLD, 26));
+        playerResultLabel.setTextFill(Color.WHITE);
+        playerResultLabel.setPadding(new Insets(8, 22, 8, 22));
+        playerResultLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 12;");
+        playerResultLabel.setVisible(false);
+
         Label name = sectionLabel("YOU");
         playerScoreLabel = scoreBadge("0");
 
-        HBox header   = new HBox(16, name, playerScoreLabel);
+        playerArrow = arrowLabel();
+
+        HBox header   = new HBox(16, name, playerScoreLabel, playerArrow);
         header.setAlignment(Pos.CENTER);
 
         HBox infoRow   = buildInfoRow();
         HBox buttonRow = buildButtonRow();
         HBox raiseRow  = buildRaiseRow();
 
-        VBox box = new VBox(12, playerCardsBox, header, infoRow, buttonRow, raiseRow);
+        VBox box = new VBox(12, playerResultLabel, playerCardsBox, header, infoRow, buttonRow, raiseRow);
         box.setAlignment(Pos.CENTER);
         box.setPadding(new Insets(10, 0, 0, 0));
         return box;
     }
 
-    private HBox buildInfoRow() 
+    private HBox buildInfoRow()
     {
         bankrollLabel = infoPill("Bankroll", "$90");
         betLabel      = infoPill("Current Bet", "$10");
@@ -338,38 +450,41 @@ public class Main extends Application
         return row;
     }
 
-    private HBox buildButtonRow() 
+    private HBox buildButtonRow()
     {
-        deal  = actionButton("Deal",  "#2a9d8f");
-        hit   = actionButton("Hit",   "#457b9d");
-        stand = actionButton("Stand", "#e76f51");
-        reset = actionButton("Reset", "#6c757d");
+        deal    = actionButton("Deal",      "#2a9d8f");
+        hit     = actionButton("Hit",       "#457b9d");
+        stand   = actionButton("Stand",     "#e76f51");
+        saveBtn = actionButton("Save Game", "#4a90d9");
+        reset   = actionButton("Reset", "#6c757d");
+
+        saveBtn.setPrefWidth(130);
+        reset.setPrefWidth(110);
 
         deal.setOnAction(e -> {
             System.out.println("Deal clicked");
             if (game.startRound(game.getHuman().getAccount().getCurrentBet())) {
-                // Clear card boxes — game logic already populated hands
+                tableClear      = false; // round is now active; card renderers should render normally
+                roundEndChecked = false; // allow checkHighScore() to fire when this round ends
                 dealerCardsBox.getChildren().clear();
                 playerCardsBox.getChildren().clear();
                 ai1CardsBox.getChildren().clear();
                 ai2CardsBox.getChildren().clear();
 
-                // Build animation list mirroring real blackjack deal order
                 List<CardInfo> cards = new ArrayList<>();
-                cards.add(new CardInfo(game.getHuman().getHand().get(0),  playerCardsBox,  false));
-                cards.add(new CardInfo(game.getAi1().getHand().get(0),    ai1CardsBox,     false));
-                cards.add(new CardInfo(game.getAi2().getHand().get(0),    ai2CardsBox,     false));
-                cards.add(new CardInfo(game.getDealer().getHand().get(0), dealerCardsBox,  false));
-                cards.add(new CardInfo(game.getHuman().getHand().get(1),  playerCardsBox,  false));
-                cards.add(new CardInfo(game.getAi1().getHand().get(1),    ai1CardsBox,     false));
-                cards.add(new CardInfo(game.getAi2().getHand().get(1),    ai2CardsBox,     false));
-                // Dealer card[1] is the hole card — stays face-down
-                cards.add(new CardInfo(game.getDealer().getHand().get(1), dealerCardsBox,  true));
+                cards.add(new CardInfo(game.getHuman().getHand().get(0),  playerCardsBox, false));
+                cards.add(new CardInfo(game.getAi1().getHand().get(0),    ai1CardsBox,    false));
+                cards.add(new CardInfo(game.getAi2().getHand().get(0),    ai2CardsBox,    false));
+                cards.add(new CardInfo(game.getDealer().getHand().get(0), dealerCardsBox, false));
+                cards.add(new CardInfo(game.getHuman().getHand().get(1),  playerCardsBox, false));
+                cards.add(new CardInfo(game.getAi1().getHand().get(1),    ai1CardsBox,    false));
+                cards.add(new CardInfo(game.getAi2().getHand().get(1),    ai2CardsBox,    false));
+                cards.add(new CardInfo(game.getDealer().getHand().get(1), dealerCardsBox, true));
 
                 setButtonsDisabled(true);
                 animateDeal(cards, () -> updateUI());
             } else {
-                updateUI(); // shows error message (e.g. no bet placed)
+                updateUI();
             }
         });
 
@@ -392,25 +507,73 @@ public class Main extends Application
         stand.setOnAction(e -> {
             System.out.println("Stand clicked");
             game.humanStand();
-            updateUI();
+            // Game logic is complete (AI + dealer turns ran synchronously).
+            // Animate the dealer's reveal / extra draws before showing final state.
+            List<Card> dealerHand = game.getDealer().getHand();
+
+            // Restore dealer area to pre-reveal visuals so we can animate.
+            dealerCardsBox.getChildren().clear();
+            dealerCardsBox.getChildren().add(
+                CardView.faceUp(dealerHand.get(0).getRank(), suitToSymbol(dealerHand.get(0).getSuit()))
+            );
+            dealerCardsBox.getChildren().add(CardView.faceDown()); // hole card — will be flipped
+
+            activateDealerTurnDisplay();
+            setButtonsDisabled(true);
+
+            // 1) Flip the hole card in-place, then 2) animate any extra draws.
+            flipCardInBox(1, dealerHand.get(1), dealerCardsBox, () -> {
+                List<CardInfo> extra = new ArrayList<>();
+                for (int i = 2; i < dealerHand.size(); i++) {
+                    extra.add(new CardInfo(dealerHand.get(i), dealerCardsBox, false));
+                }
+                animateDeal(extra, () -> {
+                    setButtonsDisabled(false);
+                    updateUI();
+                });
+            });
         });
+
+        saveBtn.setOnAction(e -> showSaveDialog());
 
         reset.setOnAction(e -> {
-            System.out.println("Reset clicked");
+            System.out.println("Reset clicked!");
+
+            if (activeArrowAnim != null) {
+                activeArrowAnim.stop();
+                activeArrowAnim = null;
+            }
+
+            if (overlayPane != null) {
+                overlayPane.getChildren().clear();
+            }
+
             game = new BlackjackGame();
+
             hasPlacedInitialBet = false;
-            raiseBetBtn.setText("Set Bet");
+            tableClear = false;
+            roundEndChecked = false;
+            highScoreStreak = 0;
+
+            raiseAmt = 0;
+            raiseSpinner.getValueFactory().setValue(10);
+            raiseBetBtn.setText("Place Bet");
+
+            if (highScoreStreakLabel != null) {
+                highScoreStreakLabel.setVisible(false);
+            }
+
             updateUI();
         });
 
-        HBox row = new HBox(12, deal, hit, stand, reset);
+        HBox row = new HBox(10, deal, hit, stand, saveBtn, reset);
         row.setAlignment(Pos.CENTER);
         row.setPadding(new Insets(10, 0, 0, 0));
         return row;
     }
 
     private HBox buildRaiseRow() {
-        Label lbl = new Label("Raise by ($):");
+        Label lbl = new Label("Bet amount ($):");
         lbl.setTextFill(Color.web("#f1faee"));
         lbl.setFont(Font.font("Arial", FontWeight.BOLD, 13));
 
@@ -419,19 +582,17 @@ public class Main extends Application
         raiseSpinner.setEditable(true);
         raiseSpinner.setPrefWidth(100);
 
-        raiseBetBtn = actionButton("Set Bet", "#8e44ad");
+        raiseBetBtn = actionButton("Place Bet", "#8e44ad");
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
-            try {
-                String text = raiseSpinner.getEditor().getText();
-                int value = Integer.parseInt(text);
-
-                game.humanRaiseBet(value);
-                updateUI();
-
-            } catch (NumberFormatException e1) {
-                messageLabel.setText("Invalid number");
+            raiseAmt = raiseSpinner.getValue();
+            boolean raiseApplied = game.humanRaiseBet(raiseAmt);
+            if (raiseApplied && !hasPlacedInitialBet) {
+                hasPlacedInitialBet = true;
+                raiseBetBtn.setText("Bet Placed");
+                tableClear = true; // card renderers will suppress old cards on next updateUI()
             }
+            updateUI();
         });
 
         HBox row = new HBox(10, lbl, raiseSpinner, raiseBetBtn);
@@ -441,14 +602,79 @@ public class Main extends Application
     }
 
     // -----------------------------------------------------------------------
-    // Animation — deal one card at a time, chained sequentially
+    // Save / Load dialogs
     // -----------------------------------------------------------------------
 
-    /**
-     * Animates cards one-by-one from the deck pile to each target HBox.
-     * Each card slides face-down, then flips to reveal its face on arrival.
-     * Calls onDone when the last card finishes.
-     */
+    private void showSaveDialog() {
+        String saveString = GameStateSaver.save(game, hasPlacedInitialBet, raiseAmt);
+
+        TextArea textArea = new TextArea(saveString);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefRowCount(6);
+        textArea.setPrefWidth(520);
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Save Game");
+        alert.setHeaderText("Copy this string to save your game:");
+        alert.getDialogPane().setContent(textArea);
+        alert.getDialogPane().setPrefWidth(540);
+
+        alert.setOnShown(ev -> {
+            textArea.selectAll();
+            textArea.requestFocus();
+        });
+
+        alert.showAndWait();
+    }
+
+    private void showLoadDialog() {
+        TextArea textArea = new TextArea();
+        textArea.setWrapText(true);
+        textArea.setPromptText("Paste your save string here...");
+        textArea.setPrefRowCount(6);
+        textArea.setPrefWidth(520);
+
+        ButtonType loadBtnType = new ButtonType("Load", ButtonBar.ButtonData.OK_DONE);
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Load Game");
+        dialog.setHeaderText("Paste your save string:");
+        dialog.getDialogPane().setContent(textArea);
+        dialog.getDialogPane().setPrefWidth(540);
+        dialog.getDialogPane().getButtonTypes().addAll(loadBtnType, ButtonType.CANCEL);
+        dialog.setResultConverter(btn -> (btn == loadBtnType) ? textArea.getText() : null);
+
+        dialog.showAndWait().ifPresent(text -> {
+            if (text == null || text.trim().isEmpty()) {
+                showLoadError("Please paste a save string before clicking Load.");
+                return;
+            }
+            GameStateSaver.SaveResult result = GameStateSaver.load(text.trim());
+            if (result == null) {
+                showLoadError("Invalid or corrupted save string.\n"
+                    + "Make sure you copied the complete, unmodified save string.");
+            } else {
+                game = result.game;
+                hasPlacedInitialBet = result.hasPlacedInitialBet;
+                raiseAmt = result.raiseAmt;
+                raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
+                raiseBetBtn.setText(hasPlacedInitialBet ? "Bet Placed" : "Place Bet");
+                updateUI();
+            }
+        });
+    }
+
+    private void showLoadError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Load Error");
+        alert.setHeaderText("Could not load game state");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    // -----------------------------------------------------------------------
+    // Animation — deal one card at a time, chained sequentially
+    // -----------------------------------------------------------------------
     private void animateDeal(List<CardInfo> cards, Runnable onDone) {
         if (cards.isEmpty()) {
             if (onDone != null) onDone.run();
@@ -460,40 +686,34 @@ public class Main extends Application
     }
 
     private void animateOneCard(CardInfo info, Runnable onComplete) {
-        // --- Origin: center of the deck pile in overlay-local coords ---
         Bounds deckScene     = deckNode.localToScene(deckNode.getBoundsInLocal());
         Bounds deckInOverlay = overlayPane.sceneToLocal(deckScene);
 
         double startX = deckInOverlay.getMinX() + (deckInOverlay.getWidth()  - CardView.WIDTH)  / 2;
         double startY = deckInOverlay.getMinY() + (deckInOverlay.getHeight() - CardView.HEIGHT) / 2;
 
-        // Face-down card placed on overlay at deck position
         CardView animCard = CardView.faceDown();
         animCard.setLayoutX(startX);
         animCard.setLayoutY(startY);
         overlayPane.getChildren().add(animCard);
 
-        // Destination: center of target HBox in overlay-local coords
         Bounds targetScene     = info.targetBox.localToScene(info.targetBox.getBoundsInLocal());
         Bounds targetInOverlay = overlayPane.sceneToLocal(targetScene);
 
         double endX = targetInOverlay.getMinX() + (targetInOverlay.getWidth()  - CardView.WIDTH)  / 2;
         double endY = targetInOverlay.getMinY() + (targetInOverlay.getHeight() - CardView.HEIGHT) / 2;
 
-        // Phase 1: slide face-down card from deck to target hand
         TranslateTransition slide = new TranslateTransition(Duration.millis(450), animCard);
         slide.setToX(endX - startX);
         slide.setToY(endY - startY);
 
         slide.setOnFinished(slideEvt -> {
-            // Phase 2a: rotate 0° → 90° (card "edge-on", disappears)
             RotateTransition rotateOut = new RotateTransition(Duration.millis(110), animCard);
-            rotateOut.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0)); // Y-axis flip
+            rotateOut.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
             rotateOut.setFromAngle(0);
             rotateOut.setToAngle(90);
 
             rotateOut.setOnFinished(rotOutEvt -> {
-                // Swap content: remove face-down, add revealed card
                 overlayPane.getChildren().remove(animCard);
 
                 CardView revealCard = info.faceDown
@@ -504,12 +724,10 @@ public class Main extends Application
                 revealCard.setLayoutY(startY);
                 revealCard.setTranslateX(endX - startX);
                 revealCard.setTranslateY(endY - startY);
-                // Start the flip-in from -90° (edge-on) so it opens toward the viewer
                 revealCard.setRotationAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
                 revealCard.setRotate(-90);
                 overlayPane.getChildren().add(revealCard);
 
-                // Phase 2b: rotate -90° → 0° (card opens to face)
                 RotateTransition rotateIn = new RotateTransition(Duration.millis(110), revealCard);
                 rotateIn.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
                 rotateIn.setFromAngle(-90);
@@ -517,7 +735,6 @@ public class Main extends Application
 
                 rotateIn.setOnFinished(rotInEvt -> {
                     overlayPane.getChildren().remove(revealCard);
-                    // Place permanent card in the target HBox
                     CardView staticCard = info.faceDown
                         ? CardView.faceDown()
                         : CardView.faceUp(info.card.getRank(), suitToSymbol(info.card.getSuit()));
@@ -533,14 +750,179 @@ public class Main extends Application
         slide.play();
     }
 
-    // Disable/enable all interactive controls during animation.
     private void setButtonsDisabled(boolean disabled) {
         deal.setDisable(disabled);
         hit.setDisable(disabled);
         stand.setDisable(disabled);
-        // reset.setDisable(disabled); allows users to reset whenever
         raiseBetBtn.setDisable(disabled);
         raiseSpinner.setDisable(disabled);
+    }
+
+    /**
+     * Manually activate the "DEALER's TURN" indicator UI elements.
+     * Used during dealer card animations when the game model has already
+     * advanced past the dealer turn (currentTurn == ROUND_OVER).
+     */
+    private void activateDealerTurnDisplay() {
+        if (activeArrowAnim != null) {
+            activeArrowAnim.stop();
+            activeArrowAnim = null;
+        }
+        dealerArrow.setVisible(false);
+        ai1Arrow.setVisible(false);
+        ai2Arrow.setVisible(false);
+        playerArrow.setVisible(false);
+
+        dealerArrow.setVisible(true);
+        dealerArrow.setTranslateY(0);
+        TranslateTransition bounce = new TranslateTransition(Duration.millis(500), dealerArrow);
+        bounce.setFromY(0);
+        bounce.setToY(-6);
+        bounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        bounce.setAutoReverse(true);
+        bounce.play();
+        activeArrowAnim = bounce;
+
+        turnBannerLabel.setText("  DEALER's TURN  ");
+        turnBannerLabel.setStyle(
+            "-fx-background-color: #6c3483;" +
+            "-fx-background-radius: 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+        );
+        highlightScoreBadge(dealerScoreLabel);
+    }
+
+    /**
+     * Animates an in-place Y-axis flip of the card node at {@code index} inside
+     * {@code box}, replacing it with a face-up view of {@code card} at the halfway
+     * point of the flip.  Calls {@code onComplete} when the animation finishes.
+     */
+    private void flipCardInBox(int index, Card card, HBox box, Runnable onComplete) {
+        if (index < 0 || index >= box.getChildren().size()) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        javafx.scene.Node existing = box.getChildren().get(index);
+
+        RotateTransition rotateOut = new RotateTransition(Duration.millis(150), existing);
+        rotateOut.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+        rotateOut.setFromAngle(0);
+        rotateOut.setToAngle(90);
+
+        rotateOut.setOnFinished(ev -> {
+            CardView faceUp = CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit()));
+            box.getChildren().set(index, faceUp);
+
+            RotateTransition rotateIn = new RotateTransition(Duration.millis(150), faceUp);
+            rotateIn.setAxis(javafx.geometry.Point3D.ZERO.add(0, 1, 0));
+            rotateIn.setFromAngle(-90);
+            rotateIn.setToAngle(0);
+            rotateIn.setOnFinished(e2 -> { if (onComplete != null) onComplete.run(); });
+            rotateIn.play();
+        });
+
+        rotateOut.play();
+    }
+
+    // -----------------------------------------------------------------------
+    // Turn indicator
+    // -----------------------------------------------------------------------
+    private void updateTurnIndicator() {
+        // Stop any in-progress bounce animation from the previous turn
+        if (activeArrowAnim != null) {
+            activeArrowAnim.stop();
+            activeArrowAnim = null;
+        }
+
+        // Hide all arrows; the correct one is made visible below
+        dealerArrow.setVisible(false);
+        ai1Arrow.setVisible(false);
+        ai2Arrow.setVisible(false);
+        playerArrow.setVisible(false);
+
+        BlackjackGame.Turn turn = game.getCurrentTurn();
+
+        if (!game.isRoundActive() && turn != BlackjackGame.Turn.DEALER) {
+            // Between rounds: prompt the player to place their bet
+            playerArrow.setVisible(true);
+            playerArrow.setTranslateY(0);
+            TranslateTransition bettingBounce = new TranslateTransition(Duration.millis(500), playerArrow);
+            bettingBounce.setFromY(0);
+            bettingBounce.setToY(-6);
+            bettingBounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+            bettingBounce.setAutoReverse(true);
+            bettingBounce.play();
+            activeArrowAnim = bettingBounce;
+
+            turnBannerLabel.setText("  CHOOSE BET  ");
+            turnBannerLabel.setStyle(
+                "-fx-background-color: #e76f51;" +
+                "-fx-background-radius: 16;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+            );
+            highlightScoreBadge(playerScoreLabel);
+            return;
+        }
+
+        Label  arrowToShow;
+        Label  badgeToHighlight;
+        String bannerText;
+        String bannerColor;
+
+        switch (turn) {
+            case HUMAN -> {
+                arrowToShow      = playerArrow;
+                badgeToHighlight = playerScoreLabel;
+                bannerText       = "YOUR TURN";
+                bannerColor      = "#2a9d8f";
+            }
+            case AI1 -> {
+                arrowToShow      = ai1Arrow;
+                badgeToHighlight = ai1ScoreLabel;
+                bannerText       = "AI 1's TURN";
+                bannerColor      = "#457b9d";
+            }
+            case AI2 -> {
+                arrowToShow      = ai2Arrow;
+                badgeToHighlight = ai2ScoreLabel;
+                bannerText       = "AI 2's TURN";
+                bannerColor      = "#457b9d";
+            }
+            case DEALER -> {
+                arrowToShow      = dealerArrow;
+                badgeToHighlight = dealerScoreLabel;
+                bannerText       = "DEALER's TURN";
+                bannerColor      = "#6c3483";
+            }
+            default -> {
+                turnBannerLabel.setText("");
+                turnBannerLabel.setStyle("-fx-background-color: transparent; -fx-background-radius: 16;");
+                highlightScoreBadge(null);
+                return;
+            }
+        }
+
+        // Show and animate the active section's arrow
+        arrowToShow.setVisible(true);
+        arrowToShow.setTranslateY(0);
+        TranslateTransition bounce = new TranslateTransition(Duration.millis(500), arrowToShow);
+        bounce.setFromY(0);
+        bounce.setToY(-6);
+        bounce.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        bounce.setAutoReverse(true);
+        bounce.play();
+        activeArrowAnim = bounce;
+
+        // Update the central turn banner
+        turnBannerLabel.setText("  " + bannerText + "  ");
+        turnBannerLabel.setStyle(
+            "-fx-background-color: " + bannerColor + ";" +
+            "-fx-background-radius: 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 2);"
+        );
+
+        // Highlight the active player's score badge gold
+        highlightScoreBadge(badgeToHighlight);
     }
 
     // -----------------------------------------------------------------------
@@ -555,16 +937,23 @@ public class Main extends Application
             dealerScoreLabel.setText(game.getDealer().getVisibleHandValue() + " + ?");
         }
 
-        playerScoreLabel.setText(String.valueOf(game.getHuman().getHandValue()));
-        ai1ScoreLabel.setText(String.valueOf(game.getAi1().getHandValue()));
-        ai2ScoreLabel.setText(String.valueOf(game.getAi2().getHandValue()));
+        if (tableClear && !game.isRoundActive()) {
+            dealerScoreLabel.setText("0");
+            playerScoreLabel.setText("0");
+            ai1ScoreLabel.setText("0");
+            ai2ScoreLabel.setText("0");
+        } else {
+            playerScoreLabel.setText(String.valueOf(game.getHuman().getHandValue()));
+            ai1ScoreLabel.setText(String.valueOf(game.getAi1().getHandValue()));
+            ai2ScoreLabel.setText(String.valueOf(game.getAi2().getHandValue()));
+        }
 
         bankrollLabel.setText("Bankroll $" + formatMoney(game.getHuman().getAccount().getTotal()));
         betLabel.setText("Current Bet $" + formatMoney(game.getHuman().getAccount().getCurrentBet()));
 
         ai1BankrollLabel.setText("Bankroll $" + formatMoney(game.getAi1().getAccount().getTotal()));
         ai1BetLabel.setText("Current Bet $" + formatMoney(game.getAi1().getAccount().getCurrentBet()));
-        
+
         ai2BankrollLabel.setText("Bankroll $" + formatMoney(game.getAi2().getAccount().getTotal()));
         ai2BetLabel.setText("Current Bet $" + formatMoney(game.getAi2().getAccount().getCurrentBet()));
 
@@ -573,11 +962,29 @@ public class Main extends Application
         updateAI1Cards();
         updateAI2Cards();
 
-        boolean humanTurn = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
-        int bankFloor = (int) Math.floor(game.getHuman().getAccount().getTotal());
-        boolean canRaise = !game.isRoundActive() && bankFloor >= 1;
+        // Reset bet flag between rounds so the player can bet again
+        if (game.getCurrentTurn() == BlackjackGame.Turn.ROUND_OVER && hasPlacedInitialBet) {
+            hasPlacedInitialBet = false;
+            raiseBetBtn.setText("Place Bet");
+        }
 
-        if (canRaise) {
+        // High score check — fires exactly once per round end
+        if (game.getCurrentTurn() == BlackjackGame.Turn.ROUND_OVER && !roundEndChecked) {
+            roundEndChecked = true;
+            checkHighScore();
+        }
+
+        if (!game.isRoundActive() && game.getHuman().getAccount().getCurrentBet() > 0) {
+            hasPlacedInitialBet = true;
+            raiseBetBtn.setText("Bet Placed");
+        }
+
+        boolean humanTurn       = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
+        int     bankFloor       = (int) Math.floor(game.getHuman().getAccount().getTotal());
+
+        boolean canPlaceBet     = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
+
+        if (canPlaceBet) {
             SpinnerValueFactory.IntegerSpinnerValueFactory fac =
                 (SpinnerValueFactory.IntegerSpinnerValueFactory) raiseSpinner.getValueFactory();
             fac.setMax(bankFloor);
@@ -593,6 +1000,125 @@ public class Main extends Application
         hit.setDisable(!humanTurn);
         stand.setDisable(!humanTurn);
         deal.setDisable(game.isRoundActive());
+
+        updateTurnIndicator();
+        updatePlayerResult();
+    }
+
+    // -----------------------------------------------------------------------
+    // Player outcome badge
+    // -----------------------------------------------------------------------
+
+    /**
+     * Updates the outcome badge that floats over the player's card area.
+     * Shows BUST!, BLACKJACK!, YOU WIN!, PUSH, or YOU LOSE depending on
+     * the current game state.  Hidden during active play and before the first deal.
+     */
+    private void updatePlayerResult() {
+        Player human  = game.getHuman();
+        Dealer dealer = game.getDealer();
+
+        // No cards yet, or initial bet placed and waiting to deal — keep table clean
+        if (human.getHand().isEmpty() || (tableClear && !game.isRoundActive())) {
+            playerResultLabel.setVisible(false);
+            return;
+        }
+
+        String text;
+        String bgColor;
+
+        Player.Status status = human.getStatus();
+
+        if (status == Player.Status.BUST) {
+            text    = "BUST!";
+            bgColor = "rgba(230,57,70,0.88)";
+        } else if (status == Player.Status.BLACKJACK) {
+            text    = "BLACKJACK!";
+            bgColor = "rgba(200,160,0,0.90)";
+        } else if (!game.isRoundActive()) {
+            // Round finished — show the settled outcome
+            switch (resolveHumanOutcome()) {
+                case "WIN"  -> { text = "YOU WIN!";  bgColor = "rgba(42,157,143,0.88)"; }
+                case "LOSE" -> { text = "YOU LOSE";  bgColor = "rgba(80,80,80,0.78)";   }
+                case "PUSH" -> { text = "PUSH";      bgColor = "rgba(70,100,140,0.80)"; }
+                default     -> { playerResultLabel.setVisible(false); return; }
+            }
+        } else {
+            // Round active and player is still PLAYING or STAND — no badge
+            playerResultLabel.setVisible(false);
+            return;
+        }
+
+        playerResultLabel.setText(text);
+        playerResultLabel.setStyle(
+            "-fx-background-color: " + bgColor + ";" +
+            "-fx-background-radius: 12;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 10, 0.3, 0, 2);"
+        );
+        playerResultLabel.setVisible(true);
+    }
+
+    /**
+     * Mirrors the {@code settlePlayer(human)} logic from {@link BlackjackGame}
+     * and returns the human player's outcome as a string: "WIN", "LOSE", or "PUSH".
+     * Call only when the round is no longer active.
+     */
+    private String resolveHumanOutcome() {
+        Player human  = game.getHuman();
+        Dealer dealer = game.getDealer();
+
+        if (human.getStatus()  == Player.Status.BUST)      return "LOSE";
+        if (dealer.getStatus() == Player.Status.BUST)      return "WIN";
+
+        if (human.getStatus()  == Player.Status.BLACKJACK
+                && dealer.getStatus() != Player.Status.BLACKJACK) return "WIN";
+        if (dealer.getStatus() == Player.Status.BLACKJACK
+                && human.getStatus()  != Player.Status.BLACKJACK) return "LOSE";
+
+        int humanVal  = human.getHandValue();
+        int dealerVal = dealer.getHandValue();
+
+        if (humanVal > dealerVal) return "WIN";
+        if (humanVal < dealerVal) return "LOSE";
+        return "PUSH";
+    }
+
+    // -----------------------------------------------------------------------
+    // High score / streak
+    // -----------------------------------------------------------------------
+
+    /**
+     * Called once per round end.  Compares the current bankroll to the in-session
+     * high score, updates the streak, and triggers the visual indicator or hides it.
+     */
+    private void checkHighScore() {
+        int bank = (int) game.getHuman().getAccount().getTotal();
+        if (bank > sessionHighScore) {
+            sessionHighScore = bank;
+            highScoreStreak++;
+            if (onNewHighScore != null) onNewHighScore.run();
+            showHighScoreIndicator();
+        } else {
+            highScoreStreak = 0;
+            highScoreStreakLabel.setVisible(false);
+        }
+    }
+
+    /** Displays and pulses the "New High Score!" / "Hot Streak xN" banner. */
+    private void showHighScoreIndicator() {
+        String text = (highScoreStreak == 1)
+            ? "  New High Score!  "
+            : "  Hot Streak x" + highScoreStreak + "  ";
+        highScoreStreakLabel.setText(text);
+        highScoreStreakLabel.setVisible(true);
+
+        javafx.animation.FadeTransition pulse =
+            new javafx.animation.FadeTransition(Duration.millis(500), highScoreStreakLabel);
+        pulse.setFromValue(0.3);
+        pulse.setToValue(1.0);
+        pulse.setCycleCount(6);
+        pulse.setAutoReverse(true);
+        pulse.play();
     }
 
     // -----------------------------------------------------------------------
@@ -600,6 +1126,7 @@ public class Main extends Application
     // -----------------------------------------------------------------------
     private void updateDealerCards() {
         dealerCardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return; // initial bet placed, waiting to deal
         for (int i = 0; i < game.getDealer().getHand().size(); i++) {
             Card card = game.getDealer().getHand().get(i);
             if (i == 1 && !game.getDealer().isHoleCardRevealed()) {
@@ -612,6 +1139,7 @@ public class Main extends Application
 
     private void updateHumanCards() {
         playerCardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getHuman().getHand()) {
             playerCardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
@@ -619,6 +1147,7 @@ public class Main extends Application
 
     private void updateAI1Cards() {
         ai1CardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getAi1().getHand()) {
             ai1CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
@@ -626,6 +1155,7 @@ public class Main extends Application
 
     private void updateAI2Cards() {
         ai2CardsBox.getChildren().clear();
+        if (tableClear && !game.isRoundActive()) return;
         for (Card card : game.getAi2().getHand()) {
             ai2CardsBox.getChildren().add(CardView.faceUp(card.getRank(), suitToSymbol(card.getSuit())));
         }
@@ -649,8 +1179,38 @@ public class Main extends Application
         return String.format("%.2f", amount);
     }
 
-    private Label sectionLabel(String text) 
-    {
+    /** Creates the hidden, bouncing arrow label used as a per-section turn pointer. */
+    private Label arrowLabel() {
+        Label l = new Label("\u25BC");
+        l.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        l.setTextFill(Color.web("#FFD700"));
+        l.setStyle("-fx-effect: dropshadow(gaussian, rgba(255,200,0,0.7), 8, 0.4, 0, 0);");
+        l.setVisible(false);
+        return l;
+    }
+
+    /** Turns the active badge gold; resets all others to the default white style. */
+    private void highlightScoreBadge(Label active) {
+        String defaultStyle =
+            "-fx-background-color: #f1faee;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: #1d3557;" +
+            "-fx-border-radius: 14;" +
+            "-fx-border-width: 2;";
+        String activeStyle =
+            "-fx-background-color: #FFD700;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: #b8860b;" +
+            "-fx-border-radius: 14;" +
+            "-fx-border-width: 2;";
+
+        for (Label badge : new Label[]{dealerScoreLabel, playerScoreLabel, ai1ScoreLabel, ai2ScoreLabel}) {
+            badge.setStyle(badge == active ? activeStyle : defaultStyle);
+            badge.setTextFill(Color.web("#1d3557"));
+        }
+    }
+
+    private Label sectionLabel(String text) {
         Label l = new Label(text);
         l.setFont(Font.font("Arial", FontWeight.BOLD, 16));
         l.setTextFill(Color.web("#f1faee"));
@@ -658,8 +1218,7 @@ public class Main extends Application
         return l;
     }
 
-    private Label scoreBadge(String text) 
-    {
+    private Label scoreBadge(String text) {
         Label l = new Label(text);
         l.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         l.setTextFill(Color.web("#1d3557"));
@@ -674,8 +1233,7 @@ public class Main extends Application
         return l;
     }
 
-    private Label infoPill(String title, String value) 
-    {
+    private Label infoPill(String title, String value) {
         Label l = new Label(title + "  " + value);
         l.setFont(Font.font("Arial", FontWeight.BOLD, 15));
         l.setTextFill(Color.web("#f1faee"));
@@ -690,8 +1248,7 @@ public class Main extends Application
         return l;
     }
 
-    private Button actionButton(String text, String hexColor) 
-    {
+    private Button actionButton(String text, String hexColor) {
         Button b = new Button(text);
         b.setFont(Font.font("Arial", FontWeight.BOLD, 15));
         b.setPrefWidth(110);
@@ -708,8 +1265,7 @@ public class Main extends Application
         return b;
     }
 
-    private RadialGradient tableFelt() 
-    {
+    private RadialGradient tableFelt() {
         return new RadialGradient(
             0, 0, 0.5, 0.5, 0.9, true, CycleMethod.NO_CYCLE,
             new Stop(0.0, Color.web("#2d6a4f")),
@@ -717,8 +1273,7 @@ public class Main extends Application
         );
     }
 
-    public static void main(String[] args) 
-    {
+    public static void main(String[] args) {
         launch(args);
     }
 }

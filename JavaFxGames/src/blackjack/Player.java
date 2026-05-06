@@ -97,6 +97,9 @@ public class Player
     public List<Card> getHand() { return hand; }
     public Status getStatus()   { return status; }
 
+    /** For save/load restore only — directly sets status without card evaluation. */
+    void setStatus(Status s) { this.status = s; }
+
     @Override
     public String toString() 
     {

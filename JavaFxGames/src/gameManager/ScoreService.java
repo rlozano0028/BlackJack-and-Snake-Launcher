@@ -38,11 +38,11 @@ public class ScoreService {
      * Writes default 1000 entries for both games for the given username,
      * but only if no entry already exists for that (game, username) pair.
      */
-    // public void ensureDefaultScore(String username) {
-    //     ensureEntry("BLACKJACK", username, 100);
-    //     migrateScore("BLACKJACK", username, 1000, 100); // downgrade old default
-    //     ensureEntry("SNAKE", username, 1000);
-    // }
+    public void ensureDefaultScore(String username) {
+        ensureEntry("BLACKJACK", username, 100);
+        migrateScore("BLACKJACK", username, 1000, 100); // downgrade old default
+        ensureEntry("SNAKE", username, 1000);
+    }
 
     /**
      * Updates the score for (game, username). If an entry already exists and

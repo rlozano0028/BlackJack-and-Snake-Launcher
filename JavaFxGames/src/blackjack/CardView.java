@@ -74,37 +74,4 @@ public class CardView extends StackPane
     {
         return new CardView("", "", true);
     }
-
-    /**
-     * Replaces this card's visual content in-place with a face-up view.
-     * Used mid-animation to swap face-down → face-up without creating a new node.
-     */
-    public void flipTo(String rank, String suit) 
-    {
-        getChildren().clear();
-
-        Rectangle bg = new Rectangle(WIDTH, HEIGHT);
-        bg.setArcWidth(16);
-        bg.setArcHeight(16);
-        bg.setStroke(Color.web("#222"));
-        bg.setStrokeWidth(1.5);
-        bg.setFill(Color.WHITE);
-
-        Color color = (suit.equals("\u2665") || suit.equals("\u2666"))
-            ? Color.web("#c8102e")
-            : Color.web("#111");
-
-        Text rankText = new Text(rank);
-        rankText.setFont(Font.font("Arial", FontWeight.BOLD, 30));
-        rankText.setFill(color);
-
-        Text suitText = new Text(suit);
-        suitText.setFont(Font.font("Arial", 40));
-        suitText.setFill(color);
-
-        VBox content = new VBox(4, rankText, suitText);
-        content.setAlignment(Pos.CENTER);
-
-        getChildren().addAll(bg, content);
-    }
 }

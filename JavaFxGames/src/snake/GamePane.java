@@ -103,7 +103,6 @@ public class GamePane extends Pane {
 
             if (gameLogic.isGameOver()) {
                 timeline.stop();
-                drawTopBar();
                 showGameOverOverlay();
                 return;
             }
