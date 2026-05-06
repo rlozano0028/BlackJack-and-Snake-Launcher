@@ -2,7 +2,7 @@
 
 # Game Manager System — CS151 Spring 2026
 
-### Blackjack + Snake Game JavaFX Project
+### BlackJack + Snake Game JavaFX Project
 
 </div>
 
@@ -14,11 +14,11 @@ This project is a **JavaFX-based Game Manager application** that allows users to
 
 The application includes:
 
-- **Blackjack** — a turn-based Blackjack game with one human player, two automated players, and a dealer
-- **Snake Game** — a classic real-time Snake game using keyboard controls
+- **BlackJack** — a turn-based card game with AI players, betting, and save/load functionality
+- **Snake Game** — a real-time Snake game using keyboard controls
 - **Account System** — user accounts saved locally in `user_accounts.txt`
 - **High Score System** — scores for both games saved in one shared file, `high_scores.txt`
-- **Persistent Toolbar** — navigation buttons remain visible after login
+- **Persistent Toolbar** — navigation available at all times after login
 
 ---
 
@@ -28,10 +28,10 @@ The application includes:
 |---|---|
 | **User Login** | Users can create accounts and log in with saved credentials |
 | **Persistent Accounts** | Account data remains after closing and reopening the program |
-| **High Scores** | Top 5 scores for Blackjack and Snake are displayed in the main menu |
-| **Game Launcher** | Users can choose Blackjack or Snake from the main menu |
+| **High Scores** | Top 5 scores for BlackJack and Snake are displayed in the main menu |
+| **Game Launcher** | Users can choose BlackJack or Snake from the main menu |
 | **Toolbar Navigation** | Main Menu and Log Out buttons remain available after login |
-| **Blackjack** | Includes betting, AI players, dealer logic, hit/stand actions, and money tracking |
+| **BlackJack** | Includes betting, AI players, dealer logic, hit/stand actions, and money tracking |
 | **Snake** | Includes arrow-key movement, food, growth, score tracking, pause, collision detection, and restart |
 
 ---
@@ -43,7 +43,7 @@ The application includes:
 | Package | Classes | Description |
 |---|---|---|
 | `gameManager` | `GameManager`, `AccountService`, `ScoreService`, `ScoreEntry` | Handles login, account storage, high scores, main menu, and navigation |
-| `blackjack` | `Main`, `BlackjackGame`, `Player`, `Dealer`, `Deck`, `Card`, `Bets`, `CardView` | Contains Blackjack game logic, UI, cards, players, betting, and dealer behavior |
+| `blackjack` | `Main`, `BlackjackGame`, `Player`, `Dealer`, `Deck`, `Card`, `Bets`, `CardView` | Contains BlackJack game logic, UI, cards, players, betting, and dealer behavior |
 | `snake` | `GamePane`, `SnakeGameLogic`, `Snake`, `Fruit`, `GameObject`, `Direction`, `Position`, `Resettable`, `SoundPlayer` | Contains Snake game logic, rendering, movement, food, pause, scoring, and sound |
 | `images` | Fruit images and game assets | Image resources used by the games |
 | `sound` | Music/audio files | Audio resources used by the games |
@@ -54,7 +54,7 @@ The application includes:
 
 ### Inheritance
 
-- `Dealer` extends `Player` in the Blackjack package.
+- `Dealer` extends `Player` in the BlackJack package.
 - `Snake` extends `GameObject` in the Snake package.
 - `Fruit` extends `GameObject` in the Snake package.
 
@@ -64,8 +64,9 @@ The application includes:
 
 ### Encapsulation
 
-- Game data is managed through classes such as `BlackjackGame`, `SnakeGameLogic`, `AccountService`, and `ScoreService`.
+- Game data is managed through classes such as `BlackjackGame`, `SnakeGameLogic`, `AccountService`, `ScoreService`, and `GameStateSaver1`.
 - Account and score data are handled through service classes instead of being written directly inside the UI.
+- BlackJack save/load logic is handled through GameStateSaver.
 
 ### Separation of Responsibilities
 
@@ -74,8 +75,9 @@ The application includes:
 | `GameManager` | Main JavaFX application, login screens, main menu, toolbar, and game launching |
 | `AccountService` | Reads and writes account data in `user_accounts.txt` |
 | `ScoreService` | Reads, writes, updates, and sorts high scores in `high_scores.txt` |
-| `BlackjackGame` | Handles Blackjack rules and game state |
-| `Main` | Builds and updates the Blackjack JavaFX interface |
+| `BlackjackGame` | Handles BlackJack rules and game state |
+| `GameStateSaver` | Saves and loads BlackJack game state using save strings |
+| `Main` | Builds and updates the BlackJack JavaFX interface |
 | `SnakeGameLogic` | Handles Snake movement, fruit collection, collision, scoring, pause, and restart logic |
 | `GamePane` | Draws the Snake game board and handles keyboard input |
 
@@ -187,49 +189,6 @@ java --module-path "C:/Users/YourName/Downloads/javafx-sdk-26/lib" --add-modules
 java --module-path "/Users/YourName/Downloads/javafx-sdk-26/lib" --add-modules javafx.controls,javafx.fxml,javafx.media -cp bin gameManager.GameManager
 ```
 
----
-
-### 6. Optional: Run in VS Code
-
-If using Visual Studio Code:
-
-<ol>
-  <li>Open the <code>JavaFxGames</code> folder in VS Code.</li>
-  <li>Install the <strong>Extension Pack for Java</strong>.</li>
-  <li>Create or open <code>.vscode/launch.json</code>.</li>
-  <li>Paste the configuration below and replace the JavaFX path with your own path.</li>
-</ol>
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "java",
-      "name": "Run GameManager",
-      "request": "launch",
-      "mainClass": "gameManager.GameManager",
-      "vmArgs": "--module-path "C:/Users/YourName/Downloads/javafx-sdk-26/lib" --add-modules javafx.controls,javafx.fxml,javafx.media"
-    }
-  ]
-}
-```
-
-Also create or open <code>.vscode/settings.json</code> and add:
-
-```json
-{
-  "java.project.sourcePaths": ["src"],
-  "java.project.outputPath": "bin"
-}
-```
-
-Then open <code>src/gameManager/GameManager.java</code> and click <strong>Run</strong>.
-
-</div>
-
----
-
 
 ---
 
@@ -275,24 +234,30 @@ The main menu has two main sections.
 
 | Section | Description |
 |---|---|
-| **High Scores** | Shows the top 5 scores for Blackjack and Snake |
-| **Game Launcher** | Lets the user open Blackjack or Snake |
+| **High Scores** | Shows the top 5 scores for BlackJack and Snake |
+| **Game Launcher** | Lets the user open BlackJack or Snake |
 
 The main menu also includes placeholder buttons for future games.
 
 ---
 
-## Blackjack Usage
+## BlackJack Usage
 
-### How to Open Blackjack
+### How to Open BlackJack
 
 1. Log in.
 2. Go to the main menu.
-3. Click **Open Blackjack**.
+3. Click **Open BlackJack**.
+4. Choose:
+   
+| Option | Description |
+|---|---|
+| **New Game** | Starts a new BlackJack game |
+| **Load Game** | Paste a save string to restore a previous game |
 
 ---
 
-### Blackjack Controls
+### BlackJack Controls
 
 | Button | Action |
 |---|---|
@@ -301,11 +266,11 @@ The main menu also includes placeholder buttons for future games.
 | **Hit** | Draws another card |
 | **Stand** | Ends the human player's turn |
 | **Raise** | Increases the current bet when allowed |
-| **Reset** | Starts over with a new Blackjack game |
+| **Reset** | Starts over with a new BlackJack game |
 
 ---
 
-### Blackjack Rules
+### BlackJack Rules
 
 - The game includes one human player, two AI players, and one dealer.
 - The turn order is:
@@ -316,7 +281,7 @@ Human Player → AI 1 → AI 2 → Dealer
 
 - The player may hit or stand.
 - AI players act automatically.
-- The dealer follows Blackjack dealer rules.
+- The dealer follows BlackJack dealer rules.
 - The winner is determined by comparing hand values against the dealer.
 - Players lose if they bust or have a lower hand value than the dealer.
 - Players win if the dealer busts or if their hand beats the dealer.
@@ -363,7 +328,7 @@ The project uses two text files to save data.
 | File | Purpose |
 |---|---|
 | `user_accounts.txt` | Stores usernames and passwords |
-| `high_scores.txt` | Stores Blackjack and Snake high scores |
+| `high_scores.txt` | Stores BlackJack and Snake high scores |
 
 Example account format:
 
@@ -383,16 +348,16 @@ SNAKE:username:1000
 
 ### Roman
 
-- Game logic – implemented Blackjack rules and gameplay
-- UI – designed the Blackjack interface
+- Game logic – implemented BlackJack rules and gameplay
+- UI – designed the BlackJack interface
 - Game flow – managed how each round progresses
 
 ### Jonas
 
 - AI logic – handled how AI players decide to hit or stand
-- Players & Cards – built the core Blackjack classes
+- Players & Cards – built the core BlackJack classes
 - Connected visuals to logic – made the UI update based on game actions
-- JUnit tests – tested Blackjack functionality
+- JUnit tests – tested BlackJack functionality
 
 ### Conrad
 
