@@ -1,2 +1,1 @@
-BLACKJACK:trungvan:1000
-SNAKE:trungvan:1000
+SNAKE:hello:11
