@@ -1,1 +1,2 @@
-SNAKE:hello:11
+SNAKE:hello:1000
+BLACKJACK:hello:1000
