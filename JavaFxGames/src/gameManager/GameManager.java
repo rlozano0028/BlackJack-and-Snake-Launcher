@@ -171,7 +171,6 @@ public class GameManager extends Application {
                 errorLabel.setText("Username already taken.");
                 return;
             }
-            scoreService.ensureDefaultScore(user);
             loginScreen();
         });
 
