@@ -186,7 +186,7 @@ public class Main extends Application
         hasPlacedInitialBet = result.hasPlacedInitialBet;
         raiseAmt = result.raiseAmt;
         raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
-        raiseBetBtn.setText(hasPlacedInitialBet ? "Raise" : "Initial Bet");
+        raiseBetBtn.setText(hasPlacedInitialBet ? "Bet Placed" : "Place Bet");
         updateUI();
 
         return view;
@@ -557,7 +557,7 @@ public class Main extends Application
 
             raiseAmt = 0;
             raiseSpinner.getValueFactory().setValue(10);
-            raiseBetBtn.setText("Initial Bet");
+            raiseBetBtn.setText("Place Bet");
 
             if (highScoreStreakLabel != null) {
                 highScoreStreakLabel.setVisible(false);
@@ -573,7 +573,7 @@ public class Main extends Application
     }
 
     private HBox buildRaiseRow() {
-        Label lbl = new Label("Raise by ($):");
+        Label lbl = new Label("Bet amount ($):");
         lbl.setTextFill(Color.web("#f1faee"));
         lbl.setFont(Font.font("Arial", FontWeight.BOLD, 13));
 
@@ -582,14 +582,14 @@ public class Main extends Application
         raiseSpinner.setEditable(true);
         raiseSpinner.setPrefWidth(100);
 
-        raiseBetBtn = actionButton("Initial Bet", "#8e44ad");
+        raiseBetBtn = actionButton("Place Bet", "#8e44ad");
         raiseBetBtn.setPrefWidth(120);
         raiseBetBtn.setOnAction(e -> {
             raiseAmt = raiseSpinner.getValue();
             boolean raiseApplied = game.humanRaiseBet(raiseAmt);
             if (raiseApplied && !hasPlacedInitialBet) {
                 hasPlacedInitialBet = true;
-                raiseBetBtn.setText("Raise");
+                raiseBetBtn.setText("Bet Placed");
                 tableClear = true; // card renderers will suppress old cards on next updateUI()
             }
             updateUI();
@@ -658,7 +658,7 @@ public class Main extends Application
                 hasPlacedInitialBet = result.hasPlacedInitialBet;
                 raiseAmt = result.raiseAmt;
                 raiseSpinner.getValueFactory().setValue(Math.max(1, raiseAmt));
-                raiseBetBtn.setText(hasPlacedInitialBet ? "Raise" : "Initial Bet");
+                raiseBetBtn.setText(hasPlacedInitialBet ? "Bet Placed" : "Place Bet");
                 updateUI();
             }
         });
@@ -965,7 +965,7 @@ public class Main extends Application
         // Reset bet flag between rounds so the player can bet again
         if (game.getCurrentTurn() == BlackjackGame.Turn.ROUND_OVER && hasPlacedInitialBet) {
             hasPlacedInitialBet = false;
-            raiseBetBtn.setText("Initial Bet");
+            raiseBetBtn.setText("Place Bet");
         }
 
         // High score check — fires exactly once per round end
@@ -976,16 +976,15 @@ public class Main extends Application
 
         if (!game.isRoundActive() && game.getHuman().getAccount().getCurrentBet() > 0) {
             hasPlacedInitialBet = true;
-            raiseBetBtn.setText("Raise");
+            raiseBetBtn.setText("Bet Placed");
         }
 
-        boolean humanTurn          = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
-        int     bankFloor          = (int) Math.floor(game.getHuman().getAccount().getTotal());
-        boolean canPlaceInitialBet = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
-        boolean canRaiseDuringTurn = humanTurn && game.getHuman().getStatus() == Player.Status.PLAYING && bankFloor >= 1;
-        boolean canRaise           = canPlaceInitialBet || canRaiseDuringTurn;
+        boolean humanTurn       = game.isRoundActive() && game.getCurrentTurn() == BlackjackGame.Turn.HUMAN;
+        int     bankFloor       = (int) Math.floor(game.getHuman().getAccount().getTotal());
 
-        if (canRaise) {
+        boolean canPlaceBet     = !hasPlacedInitialBet && !game.isRoundActive() && bankFloor >= 1;
+
+        if (canPlaceBet) {
             SpinnerValueFactory.IntegerSpinnerValueFactory fac =
                 (SpinnerValueFactory.IntegerSpinnerValueFactory) raiseSpinner.getValueFactory();
             fac.setMax(bankFloor);
