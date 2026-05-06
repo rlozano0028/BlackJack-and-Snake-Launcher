@@ -80,6 +80,7 @@ public class Main extends Application
     private Button hit;
     private Button stand;
     private Button saveBtn;
+    private Button reset;
     private Spinner<Integer> raiseSpinner;
     private Button raiseBetBtn;
 
@@ -455,8 +456,10 @@ public class Main extends Application
         hit     = actionButton("Hit",       "#457b9d");
         stand   = actionButton("Stand",     "#e76f51");
         saveBtn = actionButton("Save Game", "#4a90d9");
+        reset   = actionButton("Reset", "#6c757d");
 
         saveBtn.setPrefWidth(130);
+        reset.setPrefWidth(110);
 
         deal.setOnAction(e -> {
             System.out.println("Deal clicked");
@@ -533,7 +536,37 @@ public class Main extends Application
 
         saveBtn.setOnAction(e -> showSaveDialog());
 
-        HBox row = new HBox(10, deal, hit, stand, saveBtn);
+        reset.setOnAction(e -> {
+            System.out.println("Reset clicked!");
+
+            if (activeArrowAnim != null) {
+                activeArrowAnim.stop();
+                activeArrowAnim = null;
+            }
+
+            if (overlayPane != null) {
+                overlayPane.getChildren().clear();
+            }
+
+            game = new BlackjackGame();
+
+            hasPlacedInitialBet = false;
+            tableClear = false;
+            roundEndChecked = false;
+            highScoreStreak = 0;
+
+            raiseAmt = 0;
+            raiseSpinner.getValueFactory().setValue(10);
+            raiseBetBtn.setText("Initial Bet");
+
+            if (highScoreStreakLabel != null) {
+                highScoreStreakLabel.setVisible(false);
+            }
+
+            updateUI();
+        });
+
+        HBox row = new HBox(10, deal, hit, stand, saveBtn, reset);
         row.setAlignment(Pos.CENTER);
         row.setPadding(new Insets(10, 0, 0, 0));
         return row;
