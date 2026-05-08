@@ -357,6 +357,7 @@ SNAKE:username:1000
 - AI logic – handled how AI players decide to hit or stand
 - Players & Cards – built the core BlackJack classes
 - Connected visuals to logic – made the UI update based on game actions
+- Music – added background music
 - JUnit tests – tested BlackJack functionality
 
 ### Conrad
