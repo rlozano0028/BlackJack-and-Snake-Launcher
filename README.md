@@ -7,7 +7,7 @@
 </div>
 
 ---
-
+# Video Link: https://youtu.be/NxwDbVcaaAk
 ## Overview
 
 This project is a **JavaFX-based Game Manager application** that allows users to create accounts, log in, view high scores, and launch two games from one central menu.
