@@ -238,14 +238,21 @@ public class GameManager extends Application {
 
         Button bjBtn    = new Button("Open Blackjack");
         Button snakeBtn = new Button("Open Snake");
+        Button comingSoonBtn1 = new Button("Coming soon");
+        Button comingSoonBtn2 = new Button("Coming soon");
 
         bjBtn.setPrefWidth(200);
         snakeBtn.setPrefWidth(200);
+        comingSoonBtn1.setPrefWidth(200);
+        comingSoonBtn2.setPrefWidth(200);
+
+        comingSoonBtn1.setDisable(true);
+        comingSoonBtn2.setDisable(true);
 
         bjBtn.setOnAction(e -> blackjackMainMenu());
         snakeBtn.setOnAction(e -> snakeGame());
 
-        VBox launcherPane = new VBox(15, launchTitle, bjBtn, snakeBtn);
+        VBox launcherPane = new VBox(15, launchTitle, bjBtn, snakeBtn, comingSoonBtn1, comingSoonBtn2);
         launcherPane.setAlignment(Pos.CENTER);
         launcherPane.setPadding(new Insets(20));
         launcherPane.setPrefWidth(350);
