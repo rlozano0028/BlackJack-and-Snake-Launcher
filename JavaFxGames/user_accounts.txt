@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 trungvan:hello
 test:test12
 hello:hello
 roman:roman1
 demo:demo
+=======
+hello:123
+>>>>>>> f95eb59fffcf52e049fe72bab22ce1cdb78feb83

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 BLACKJACK:trungvan:1000
 SNAKE:trungvan:1000
 BLACKJACK:test:200
@@ -8,3 +9,7 @@ BLACKJACK:roman:300
 SNAKE:roman:1000
 BLACKJACK:demo:155
 SNAKE:demo:1000
+=======
+SNAKE:hello:1000
+BLACKJACK:hello:1000
+>>>>>>> f95eb59fffcf52e049fe72bab22ce1cdb78feb83
